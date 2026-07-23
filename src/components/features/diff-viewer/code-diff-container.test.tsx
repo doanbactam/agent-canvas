@@ -1,35 +1,35 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
-import { EditorContainer } from "./editor-container";
+import { CodeDiffContainer } from "./code-diff-container";
 
-describe("EditorContainer", () => {
+describe("CodeDiffContainer", () => {
   it("renders children", () => {
     render(
-      <EditorContainer height={400}>
+      <CodeDiffContainer height={400}>
         <div data-testid="child" />
-      </EditorContainer>,
+      </CodeDiffContainer>,
     );
     expect(screen.getByTestId("child")).toBeInTheDocument();
   });
 
-  it("renders with the editor-container test id", () => {
+  it("renders with the code-diff-container test id", () => {
     render(
-      <EditorContainer height={300}>
+      <CodeDiffContainer height={300}>
         <div data-testid="inner" />
-      </EditorContainer>,
+      </CodeDiffContainer>,
     );
-    expect(screen.getByTestId("editor-container")).toBeInTheDocument();
+    expect(screen.getByTestId("code-diff-container")).toBeInTheDocument();
   });
 
   // Functional contract: the `height` prop is observable only via the
   // `--editor-height` CSS custom property the component writes to the DOM.
   it("sets the --editor-height CSS variable based on height prop", () => {
     render(
-      <EditorContainer height={500}>
+      <CodeDiffContainer height={500}>
         <div data-testid="inner" />
-      </EditorContainer>,
+      </CodeDiffContainer>,
     );
-    const container = screen.getByTestId("editor-container");
+    const container = screen.getByTestId("code-diff-container");
     expect(container.style.getPropertyValue("--editor-height")).toBe("500px");
   });
 });

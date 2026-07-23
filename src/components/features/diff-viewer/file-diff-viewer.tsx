@@ -15,12 +15,13 @@ import { GitChangeStatus } from "#/api/open-hands.types";
 import { I18nKey } from "#/i18n/declaration";
 import { getLanguageFromPath } from "#/utils/get-language-from-path";
 import { cn } from "#/utils/utils";
+import { useAgentServerUITheme } from "#/hooks/use-agent-server-ui-theme";
 import { useUnifiedGitDiff } from "#/hooks/query/use-unified-git-diff";
 import { MarkdownRenderer } from "#/components/features/markdown/markdown-renderer";
 import { Typography } from "#/ui/typography";
 import ChevronUp from "#/icons/chveron-up.svg?react";
 import { LoadingSpinner } from "./loading-spinner";
-import { EditorContainer } from "./editor-container";
+import { CodeDiffContainer } from "./code-diff-container";
 
 type ViewMode = "diff" | "old" | "new";
 
@@ -40,6 +41,11 @@ const STATUS_MAP: Record<GitChangeStatus, string | IconType> = {
 
 const DIFF_EDITOR_HEIGHT = 400;
 
+const FILE_DIFF_THEMES = {
+  dark: "pierre-dark",
+  light: "pierre-light",
+} as const;
+
 export interface FileDiffViewerProps {
   path: string;
   type: GitChangeStatus;
@@ -51,21 +57,30 @@ export interface FileDiffViewerProps {
   commit?: string;
 }
 
+function splitRenamePath(path: string) {
+  const parts = path.split(/\s+/);
+  const oldName = parts[1] ?? path;
+  const newName = parts[parts.length - 1] ?? path;
+  return { oldName, newName };
+}
+
 export function FileDiffViewer({ path, type, commit }: FileDiffViewerProps) {
   const { t } = useTranslation("openhands");
   const [isCollapsed, setIsCollapsed] = React.useState(true);
   const [viewMode, setViewMode] = React.useState<ViewMode>("diff");
+  const uiTheme = useAgentServerUITheme();
 
   const isAdded = type === "A" || type === "U";
   const isDeleted = type === "D";
+  const isRenamed = type === "R";
 
-  const filePath = React.useMemo(() => {
-    if (type === "R") {
-      const parts = path.split(/\s+/).slice(1);
-      return parts[parts.length - 1];
-    }
-    return path;
-  }, [path, type]);
+  const { oldName, newName } = React.useMemo(
+    () =>
+      isRenamed ? splitRenamePath(path) : { oldName: path, newName: path },
+    [path, isRenamed],
+  );
+
+  const filePath = newName;
 
   const {
     data: diff,
@@ -91,16 +106,16 @@ export function FileDiffViewer({ path, type, commit }: FileDiffViewerProps) {
 
     try {
       return parseDiffFromFile(
-        { name: filePath, contents: original, lang: language },
-        { name: filePath, contents: modified, lang: language },
+        { name: oldName, contents: original, lang: language },
+        { name: newName, contents: modified, lang: language },
       );
-    } catch {
-      // Fall back to a minimal metadata object that will still render the new
-      // file contents. This is defensive against edge cases where the diff
-      // library cannot build a patch (e.g. identical files reported as changes).
+    } catch (error) {
+      // Defensive fallback: parseDiffFromFile can fail on malformed/empty
+      // inputs. Log the real failure and show a non-loading fallback message.
+      console.error("Failed to parse diff for", filePath, error);
       return null;
     }
-  }, [isSuccess, diff, filePath, language, isAdded, isDeleted]);
+  }, [isSuccess, diff, oldName, newName, language, isAdded, isDeleted]);
 
   const status = (type === "U" ? STATUS_MAP.A : STATUS_MAP[type]) || "?";
   const statusIcon =
@@ -134,40 +149,40 @@ export function FileDiffViewer({ path, type, commit }: FileDiffViewerProps) {
             className="w-full border-b border-[var(--oh-border)] p-4 bg-base text-[var(--oh-text-dim)] text-sm"
             data-testid="file-diff-empty"
           >
-            {t(I18nKey.DIFF_VIEWER$LOADING)}
+            {t(I18nKey.ERROR$GENERIC)}
           </div>
         );
       }
 
       return (
-        <EditorContainer height={DIFF_EDITOR_HEIGHT}>
+        <CodeDiffContainer height={DIFF_EDITOR_HEIGHT}>
           <FileDiff
             fileDiff={fileDiff}
             className="h-full w-full"
             options={{
-              theme: "pierre-dark",
-              themeType: "dark",
-              diffStyle: "split",
+              theme: FILE_DIFF_THEMES,
+              themeType: uiTheme,
+              diffStyle: isAdded || isDeleted ? "unified" : "split",
               disableFileHeader: true,
             }}
           />
-        </EditorContainer>
+        </CodeDiffContainer>
       );
     }
 
     const content = viewMode === "old" ? diff?.original : diff?.modified;
     return (
-      <EditorContainer height={DIFF_EDITOR_HEIGHT}>
+      <CodeDiffContainer height={DIFF_EDITOR_HEIGHT}>
         <File
           file={{ name: filePath, contents: content ?? "", lang: language }}
           className="h-full w-full"
           options={{
-            theme: "pierre-dark",
-            themeType: "dark",
+            theme: FILE_DIFF_THEMES,
+            themeType: uiTheme,
             disableFileHeader: true,
           }}
         />
-      </EditorContainer>
+      </CodeDiffContainer>
     );
   };
 

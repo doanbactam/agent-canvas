@@ -12,8 +12,8 @@ import { RuntimeWaitingState } from "#/components/features/conversation-panel/ru
 import { ConversationTabEmptyState } from "#/components/features/conversation/conversation-tab-empty-state";
 import { LoadingSpinner } from "#/components/features/diff-viewer/loading-spinner";
 
-// Lazy load the Monaco-backed diff viewer so the large editor chunk is only
-// fetched when the user actually opens the changes tab with diffs to show.
+// Lazy load the diff viewer so the diff rendering chunk is only fetched when
+// the user actually opens the changes tab with diffs to show.
 const LazyFileDiffViewer = React.lazy(() =>
   import("#/components/features/diff-viewer/file-diff-viewer").then((m) => ({
     default: m.FileDiffViewer,

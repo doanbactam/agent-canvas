@@ -8,8 +8,8 @@ import ChevronUp from "#/icons/chveron-up.svg?react";
 import { useCommitChanges } from "#/hooks/query/use-commit-changes";
 import { LoadingSpinner } from "./loading-spinner";
 
-// Lazy load the Monaco-backed diff viewer; commits only render diffs after
-// the user expands a row, so there is no need to pay the editor bundle cost up front.
+// Lazy load the diff viewer; commits only render diffs after the user expands
+// a row, so there is no need to pay the diff bundle cost up front.
 const LazyFileDiffViewer = React.lazy(() =>
   import("./file-diff-viewer").then((m) => ({
     default: m.FileDiffViewer,
