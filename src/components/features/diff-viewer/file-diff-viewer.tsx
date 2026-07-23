@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { GitChangeStatus } from "#/api/open-hands.types";
 import { I18nKey } from "#/i18n/declaration";
-import { getLanguageFromPath } from "#/utils/get-language-from-path";
+import { getShikiLanguageForFile } from "#/utils/file-language";
 import { cn } from "#/utils/utils";
 import { useAgentServerUITheme } from "#/hooks/use-agent-server-ui-theme";
 import { useUnifiedGitDiff } from "#/hooks/query/use-unified-git-diff";
@@ -115,7 +115,7 @@ export function FileDiffViewer({ path, type, commit }: FileDiffViewerProps) {
     commit,
   });
 
-  const language = getLanguageFromPath(filePath);
+  const language = getShikiLanguageForFile(filePath) ?? "text";
   const isMarkdownFile = language === "markdown";
   const isFetchingData = isLoading || isRefetching;
 

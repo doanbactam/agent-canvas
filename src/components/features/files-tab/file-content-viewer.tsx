@@ -7,32 +7,18 @@ import {
   withWorkspaceCacheBuster,
 } from "#/stores/use-workspace-mutation-counter";
 import { MarkdownRenderer } from "#/components/features/markdown/markdown-renderer";
+import {
+  getFileExtension,
+  getOfficeDocumentLabel,
+  isHtmlLikeExtension,
+  isMarkdownExtension,
+} from "#/utils/file-type";
 import { HighlightedSourceView } from "./highlighted-source-view";
 import type { ViewMode } from "./view-mode";
 
 interface FileContentViewerProps {
   path: string;
   viewMode: ViewMode;
-}
-
-const HTML_LIKE_EXTS = new Set(["html", "htm", "svg"]);
-const MARKDOWN_EXTS = new Set(["md", "markdown", "mdx"]);
-
-// Office/document formats we can't preview inline. The label doubles as the
-// allow-list (a present entry => Office doc) and feeds a clear, format-named
-// "no preview" message instead of the generic binary fallback.
-const OFFICE_DOCUMENT_LABELS: Record<string, string> = {
-  pptx: "PowerPoint",
-  ppt: "PowerPoint",
-  docx: "Word",
-  doc: "Word",
-  xlsx: "Excel",
-  xls: "Excel",
-};
-
-function getExtension(path: string): string {
-  const idx = path.lastIndexOf(".");
-  return idx === -1 ? "" : path.slice(idx + 1).toLowerCase();
 }
 
 /**
@@ -42,7 +28,7 @@ function getExtension(path: string): string {
  */
 function UnpreviewableFallback({ path }: { path: string }) {
   const { t } = useTranslation("openhands");
-  const documentLabel = OFFICE_DOCUMENT_LABELS[getExtension(path)];
+  const documentLabel = getOfficeDocumentLabel(getFileExtension(path));
   return (
     <div
       className="flex h-full w-full items-center justify-center text-sm text-[var(--oh-muted)]"
@@ -162,7 +148,7 @@ export function FileContentViewer({ path, viewMode }: FileContentViewerProps) {
   }
 
   // Text-like content.
-  if (mimeType === "text/html" || HTML_LIKE_EXTS.has(getExtension(path))) {
+  if (mimeType === "text/html" || isHtmlLikeExtension(getFileExtension(path))) {
     // Sandbox the preview iframe: `allow-same-origin` keeps the frame on
     // the workspace fileserver's origin so relative `<link href="…">`,
     // `<img src="…">`, etc. continue to resolve, while the absence of
@@ -181,7 +167,7 @@ export function FileContentViewer({ path, viewMode }: FileContentViewerProps) {
     );
   }
 
-  if (kind === "text" && MARKDOWN_EXTS.has(getExtension(path))) {
+  if (kind === "text" && isMarkdownExtension(getFileExtension(path))) {
     // Match the right-pane chrome color so the rich-rendered markdown
     // blends with the surrounding files tab instead of painting a stark
     // white card. We use `prose-invert` (typography plugin's dark-theme

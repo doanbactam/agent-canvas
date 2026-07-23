@@ -1,3 +1,4 @@
+import React from "react";
 import { SyntaxHighlighter } from "#/components/features/markdown/syntax-highlighter";
 import { getShikiLanguageForFile } from "#/utils/file-language";
 
@@ -21,7 +22,7 @@ interface HighlightedSourceViewProps {
  * background so the highlighted block reads as part of the surrounding chrome
  * instead of a floating card.
  */
-export function HighlightedSourceView({
+function HighlightedSourceViewImpl({
   path,
   text,
   mimeType,
@@ -75,3 +76,11 @@ export function HighlightedSourceView({
     </div>
   );
 }
+
+export const HighlightedSourceView = React.memo(
+  HighlightedSourceViewImpl,
+  (prev, next) =>
+    prev.path === next.path &&
+    prev.text === next.text &&
+    prev.mimeType === next.mimeType,
+);
