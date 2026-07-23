@@ -273,7 +273,6 @@ export default defineConfig(({ mode }) => {
         "react-is",
         "@heroui/react",
         "lucide-react",
-        "@microlink/react-json-view",
         "socket.io-client",
         // These are discovered when launching conversations:
         "react-icons/vsc",
@@ -281,7 +280,8 @@ export default defineConfig(({ mode }) => {
         "react-icons/di",
         "react-icons/io5",
         "react-icons/io",
-        "@monaco-editor/react",
+        "@pierre/diffs",
+        "@pierre/diffs/react",
         "react-textarea-autosize",
         "react-markdown",
         "remark-gfm",

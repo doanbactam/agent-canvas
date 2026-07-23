@@ -22,12 +22,14 @@ vi.mock("#/hooks/query/use-unified-git-diff", () => ({
   }),
 }));
 
-vi.mock("@monaco-editor/react", () => ({
-  DiffEditor: (props: Record<string, unknown>) => (
-    <div data-testid="file-diff-viewer" data-original={props.original} data-modified={props.modified} />
-  ),
-  Editor: (props: Record<string, unknown>) => (
-    <div data-testid="file-single-viewer" data-value={props.value} />
+vi.mock("@pierre/diffs", () => ({
+  parseDiffFromFile: () => ({ name: "file.ts", hunks: [] }),
+}));
+
+vi.mock("@pierre/diffs/react", () => ({
+  FileDiff: () => <div data-testid="file-diff-viewer" />,
+  File: (props: { file: { contents?: string } }) => (
+    <div data-testid="file-single-viewer" data-value={props.file.contents} />
   ),
 }));
 

@@ -1,7 +1,7 @@
-import { DiffEditor, Editor, Monaco } from "@monaco-editor/react";
 import React from "react";
-import { editor as editor_t } from "monaco-editor";
 import { useTranslation } from "react-i18next";
+import { FileDiff, File } from "@pierre/diffs/react";
+import { parseDiffFromFile, type FileDiffMetadata } from "@pierre/diffs";
 import {
   LuFileDiff,
   LuFileMinus,
@@ -15,10 +15,10 @@ import { GitChangeStatus } from "#/api/open-hands.types";
 import { I18nKey } from "#/i18n/declaration";
 import { getLanguageFromPath } from "#/utils/get-language-from-path";
 import { cn } from "#/utils/utils";
-import ChevronUp from "#/icons/chveron-up.svg?react";
 import { useUnifiedGitDiff } from "#/hooks/query/use-unified-git-diff";
 import { MarkdownRenderer } from "#/components/features/markdown/markdown-renderer";
 import { Typography } from "#/ui/typography";
+import ChevronUp from "#/icons/chveron-up.svg?react";
 import { LoadingSpinner } from "./loading-spinner";
 import { EditorContainer } from "./editor-container";
 
@@ -30,15 +30,6 @@ const VIEW_MODES: { mode: ViewMode; icon: IconType }[] = [
   { mode: "new", icon: LuFileCheck },
 ];
 
-const SHARED_EDITOR_OPTIONS: editor_t.IEditorOptions = {
-  renderValidationDecorations: "off",
-  readOnly: true,
-  scrollBeyondLastLine: false,
-  minimap: { enabled: false },
-  automaticLayout: true,
-  scrollbar: { alwaysConsumeMouseWheel: false },
-};
-
 const STATUS_MAP: Record<GitChangeStatus, string | IconType> = {
   A: LuFilePlus,
   D: LuFileMinus,
@@ -47,27 +38,7 @@ const STATUS_MAP: Record<GitChangeStatus, string | IconType> = {
   U: "Untracked",
 };
 
-const beforeMount = (monaco: Monaco) => {
-  monaco.editor.defineTheme("custom-diff-theme", {
-    base: "vs-dark",
-    inherit: true,
-    rules: [
-      { token: "comment", foreground: "6a9955" },
-      { token: "keyword", foreground: "569cd6" },
-      { token: "string", foreground: "ce9178" },
-      { token: "number", foreground: "b5cea8" },
-    ],
-    colors: {
-      "diffEditor.insertedTextBackground": "#014b01AA",
-      "diffEditor.removedTextBackground": "#750000AA",
-      "diffEditor.insertedLineBackground": "#003f00AA",
-      "diffEditor.removedLineBackground": "#5a0000AA",
-      "diffEditor.border": "var(--oh-border-subtle)",
-      "editorUnnecessaryCode.border": "#00000000",
-      "editorUnnecessaryCode.opacity": "rgba(0, 0, 0, 0.467)",
-    },
-  });
-};
+const DIFF_EDITOR_HEIGHT = 400;
 
 export interface FileDiffViewerProps {
   path: string;
@@ -83,10 +54,7 @@ export interface FileDiffViewerProps {
 export function FileDiffViewer({ path, type, commit }: FileDiffViewerProps) {
   const { t } = useTranslation("openhands");
   const [isCollapsed, setIsCollapsed] = React.useState(true);
-  const [editorHeight, setEditorHeight] = React.useState(400);
   const [viewMode, setViewMode] = React.useState<ViewMode>("diff");
-  const diffEditorRef = React.useRef<editor_t.IStandaloneDiffEditor>(null);
-  const singleEditorRef = React.useRef<editor_t.IStandaloneCodeEditor>(null);
 
   const isAdded = type === "A" || type === "U";
   const isDeleted = type === "D";
@@ -111,38 +79,28 @@ export function FileDiffViewer({ path, type, commit }: FileDiffViewerProps) {
     commit,
   });
 
-  const updateEditorHeight = React.useCallback(() => {
-    if (!diffEditorRef.current) return;
-    const originalEditor = diffEditorRef.current.getOriginalEditor();
-    const modifiedEditor = diffEditorRef.current.getModifiedEditor();
-    if (originalEditor && modifiedEditor) {
-      setEditorHeight(
-        Math.max(
-          originalEditor.getContentHeight(),
-          modifiedEditor.getContentHeight(),
-        ) + 20,
+  const language = getLanguageFromPath(filePath);
+  const isMarkdownFile = language === "markdown";
+  const isFetchingData = isLoading || isRefetching;
+
+  const fileDiff: FileDiffMetadata | null = React.useMemo(() => {
+    if (!isSuccess || !diff) return null;
+
+    const original = isAdded ? "" : (diff.original ?? "");
+    const modified = isDeleted ? "" : (diff.modified ?? "");
+
+    try {
+      return parseDiffFromFile(
+        { name: filePath, contents: original, lang: language },
+        { name: filePath, contents: modified, lang: language },
       );
+    } catch {
+      // Fall back to a minimal metadata object that will still render the new
+      // file contents. This is defensive against edge cases where the diff
+      // library cannot build a patch (e.g. identical files reported as changes).
+      return null;
     }
-  }, []);
-
-  const updateSingleEditorHeight = React.useCallback(() => {
-    if (singleEditorRef.current) {
-      setEditorHeight(singleEditorRef.current.getContentHeight() + 20);
-    }
-  }, []);
-
-  const handleDiffEditorMount = (editor: editor_t.IStandaloneDiffEditor) => {
-    diffEditorRef.current = editor;
-    updateEditorHeight();
-    editor.getOriginalEditor().onDidContentSizeChange(updateEditorHeight);
-    editor.getModifiedEditor().onDidContentSizeChange(updateEditorHeight);
-  };
-
-  const handleSingleEditorMount = (editor: editor_t.IStandaloneCodeEditor) => {
-    singleEditorRef.current = editor;
-    updateSingleEditorHeight();
-    editor.onDidContentSizeChange(updateSingleEditorHeight);
-  };
+  }, [isSuccess, diff, filePath, language, isAdded, isDeleted]);
 
   const status = (type === "U" ? STATUS_MAP.A : STATUS_MAP[type]) || "?";
   const statusIcon =
@@ -152,43 +110,16 @@ export function FileDiffViewer({ path, type, commit }: FileDiffViewerProps) {
       React.createElement(status, { className: "w-5 h-5" })
     );
 
-  const isFetchingData = isLoading || isRefetching;
-  const language = getLanguageFromPath(filePath);
-  const isMarkdownFile = language === "markdown";
-  const singleViewContent =
-    viewMode === "old" ? (diff?.original ?? "") : (diff?.modified ?? "");
-
   const renderContent = () => {
-    if (viewMode === "diff") {
-      return (
-        <EditorContainer height={editorHeight}>
-          <DiffEditor
-            data-testid="file-diff-viewer"
-            className="w-full h-full"
-            language={language}
-            original={isAdded ? "" : (diff?.original ?? "")}
-            modified={isDeleted ? "" : (diff?.modified ?? "")}
-            theme="custom-diff-theme"
-            onMount={handleDiffEditorMount}
-            beforeMount={beforeMount}
-            options={{
-              ...SHARED_EDITOR_OPTIONS,
-              renderSideBySide: !isAdded && !isDeleted,
-              hideUnchangedRegions: { enabled: true },
-            }}
-          />
-        </EditorContainer>
-      );
-    }
-
-    if (isMarkdownFile) {
+    if (isMarkdownFile && viewMode !== "diff") {
+      const content = viewMode === "old" ? diff?.original : diff?.modified;
       return (
         <div
           className="w-full border-b border-[var(--oh-border)] overflow-auto p-4 bg-base prose prose-invert max-w-none"
           data-testid="markdown-preview"
         >
           <MarkdownRenderer
-            content={singleViewContent}
+            content={content ?? ""}
             includeStandard
             includeHeadings
           />
@@ -196,17 +127,45 @@ export function FileDiffViewer({ path, type, commit }: FileDiffViewerProps) {
       );
     }
 
+    if (viewMode === "diff") {
+      if (!fileDiff) {
+        return (
+          <div
+            className="w-full border-b border-[var(--oh-border)] p-4 bg-base text-[var(--oh-text-dim)] text-sm"
+            data-testid="file-diff-empty"
+          >
+            {t(I18nKey.DIFF_VIEWER$LOADING)}
+          </div>
+        );
+      }
+
+      return (
+        <EditorContainer height={DIFF_EDITOR_HEIGHT}>
+          <FileDiff
+            fileDiff={fileDiff}
+            className="h-full w-full"
+            options={{
+              theme: "pierre-dark",
+              themeType: "dark",
+              diffStyle: "split",
+              disableFileHeader: true,
+            }}
+          />
+        </EditorContainer>
+      );
+    }
+
+    const content = viewMode === "old" ? diff?.original : diff?.modified;
     return (
-      <EditorContainer height={editorHeight}>
-        <Editor
-          data-testid="file-single-viewer"
-          className="w-full h-full"
-          language={language}
-          value={singleViewContent}
-          theme="custom-diff-theme"
-          beforeMount={beforeMount}
-          onMount={handleSingleEditorMount}
-          options={SHARED_EDITOR_OPTIONS}
+      <EditorContainer height={DIFF_EDITOR_HEIGHT}>
+        <File
+          file={{ name: filePath, contents: content ?? "", lang: language }}
+          className="h-full w-full"
+          options={{
+            theme: "pierre-dark",
+            themeType: "dark",
+            disableFileHeader: true,
+          }}
         />
       </EditorContainer>
     );
