@@ -153,6 +153,16 @@ function getBasename(path: string): string {
 }
 
 /**
+ * Resolve an extension hint (without the leading dot) to a Shiki language id.
+ * This is used for code-fence language labels as well as file extensions.
+ * Returns `null` when no grammar matches.
+ */
+export function getShikiLanguageForExtension(ext: string): string | null {
+  if (!ext) return null;
+  return EXTENSION_TO_LANGUAGE[ext.toLowerCase()] ?? null;
+}
+
+/**
  * Resolve a path (and optionally a MIME type) to a Shiki language id.
  * Returns `null` when no grammar matches — the caller should then render
  * the source as plain text rather than feeding "unknown" to the highlighter.

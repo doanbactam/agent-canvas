@@ -14,6 +14,7 @@ import {
   AGENT_SERVER_UI_SCOPE_SELECTOR,
   transformAgentServerUISelector,
 } from "./src/styles/agent-server-ui-style-scope";
+import { SHIKI_LANGUAGE_REGISTRY } from "./src/utils/shiki-language-registry";
 
 const LIB_ENTRY = fileURLToPath(new URL("./src/index.ts", import.meta.url));
 const LIB_EXTERNALS = [
@@ -25,71 +26,12 @@ const LIB_EXTERNALS = [
 ];
 const APP_CHUNK_MAX_BYTES = 450 * 1024;
 
-// Languages registered by the Shiki-based SyntaxHighlighter. They are listed
-// explicitly here because `optimizeDeps.noDiscovery` is enabled below; Vite
-// needs to know about them ahead of time so it does not try to optimize them
-// on first render, which Safari cannot recover from.
-const SHIKI_LANGUAGES = [
-  "bash",
-  "batch",
-  "c",
-  "clojure",
-  "cpp",
-  "csharp",
-  "css",
-  "dart",
-  "diff",
-  "dockerfile",
-  "elixir",
-  "erlang",
-  "fsharp",
-  "go",
-  "graphql",
-  "groovy",
-  "haskell",
-  "hcl",
-  "html",
-  "http",
-  "ini",
-  "java",
-  "javascript",
-  "json",
-  "json5",
-  "jsx",
-  "julia",
-  "kotlin",
-  "less",
-  "lua",
-  "makefile",
-  "markdown",
-  "matlab",
-  "nginx",
-  "nix",
-  "objective-c",
-  "ocaml",
-  "perl",
-  "php",
-  "powershell",
-  "properties",
-  "protobuf",
-  "python",
-  "r",
-  "regex",
-  "ruby",
-  "rust",
-  "sass",
-  "scala",
-  "scss",
-  "shellsession",
-  "solidity",
-  "sql",
-  "swift",
-  "toml",
-  "tsx",
-  "typescript",
-  "xml",
-  "yaml",
-];
+// Shiki grammar module subpaths registered by the SyntaxHighlighter. The list
+// is maintained in `src/utils/shiki-language-registry.ts` so it stays in sync
+// with the highlighter's `LANGUAGE_MODULES`.
+const SHIKI_LANGUAGE_SUBPATHS = [
+  ...new Set(Object.values(SHIKI_LANGUAGE_REGISTRY)),
+].map((moduleName) => `shiki/langs/${moduleName}.mjs`);
 
 const normalizeBasePath = (value?: string) => {
   const raw = value?.trim();
@@ -124,25 +66,39 @@ const appBuildConfig = {
             // "TypeError: s is not a function" at module load and blanking the
             // whole app (root-layout module fails to load → reload loop).
             name: "vendor-styling",
+            priority: 25,
             test: /node_modules[\\/](@heroui[\\/]|tailwind-variants[\\/]|tailwind-merge[\\/]|clsx[\\/])/,
           },
           {
-            // Keep the markdown / syntax-highlight ecosystem
-            // (Shiki, hast-util-to-html, and the unified/hast/mdast/micromark/
-            // remark/rehype/vfile module tree it pulls in) in one un-size-split
-            // chunk. Same failure mode as vendor-styling above: once the
-            // file-viewer (HighlightedSourceView) is imported from a second route,
-            // the generic size-split vendor group slices this tree across chunk
-            // boundaries, so a vfile/unified module's interop `require` shim
-            // can evaluate before the chunk that defines it, throwing
-            // "TypeError: i is not a function" at module load and blanking the
-            // whole app (the shared home/conversation/files-tab chunk fails to
-            // load → route-module reload loop).
+            // Keep the markdown / unified ecosystem (hast-util-to-html and the
+            // unified/hast/mdast/micromark/remark/rehype/vfile module tree it
+            // pulls in) in one un-size-split chunk. Same failure mode as
+            // vendor-styling above: once the file-viewer (HighlightedSourceView)
+            // is imported from a second route, the generic size-split vendor
+            // group slices this tree across chunk boundaries, so a
+            // vfile/unified module's interop `require` shim can evaluate before
+            // the chunk that defines it, throwing "TypeError: i is not a
+            // function" at module load and blanking the whole app.
             name: "vendor-markdown",
-            test: /node_modules[\\/](shiki[\\/]|@shikijs[\\/]|hastscript[\\/]|(hast|mdast|unist|micromark|remark|rehype)[^\\/]*[\\/]|unified[\\/]|vfile[^\\/]*[\\/]|property-information[\\/]|(comma|space)-separated-tokens[\\/]|character-entities[^\\/]*[\\/]|(parse|stringify)-entities[\\/]|decode-named-character-reference[\\/]|bail[\\/]|trough[\\/]|is-plain-obj[\\/]|zwitch[\\/]|longest-streak[\\/]|ccount[\\/]|escape-string-regexp[\\/]|markdown-table[\\/]|devlop[\\/])/,
+            priority: 20,
+            test: /node_modules[\\/](hastscript[\\/]|(hast|mdast|unist|micromark|remark|rehype)[^\\/]*[\\/]|unified[\\/]|vfile[^\\/]*[\\/]|property-information[\\/]|(comma|space)-separated-tokens[\\/]|character-entities[^\\/]*[\\/]|(parse|stringify)-entities[\\/]|decode-named-character-reference[\\/]|bail[\\/]|trough[\\/]|is-plain-obj[\\/]|zwitch[\\/]|longest-streak[\\/]|ccount[\\/]|escape-string-regexp[\\/]|markdown-table[\\/]|devlop[\\/])/,
+          },
+          {
+            // Isolate Shiki and its grammar catalog from the markdown chunk.
+            // The full catalog is large (pulled in by `@pierre/diffs`'s use of
+            // `shiki` main), so this group is size-split. `entriesAware` helps
+            // keep the modules required by the `SyntaxHighlighter` entry separate
+            // from the larger dynamic catalog loaded on-demand by the diff viewer.
+            name: "vendor-shiki",
+            priority: 15,
+            test: /node_modules[\\/](shiki[\\/]|@shikijs[\\/])/,
+            maxSize: APP_CHUNK_MAX_BYTES,
+            minSize: 20 * 1024,
+            entriesAware: true,
           },
           {
             name: "vendor",
+            priority: 10,
             test: /node_modules[\\/]/,
             maxSize: APP_CHUNK_MAX_BYTES,
             minSize: 20 * 1024,
@@ -353,7 +309,7 @@ export default defineConfig(({ mode }) => {
         "shiki/engine/javascript",
         "shiki/themes/dark-plus.mjs",
         "shiki/themes/light-plus.mjs",
-        ...SHIKI_LANGUAGES.map((lang) => `shiki/langs/${lang}.mjs`),
+        ...SHIKI_LANGUAGE_SUBPATHS,
         // Terminal dependencies - added to prevent runtime optimization
         "@xterm/addon-fit",
         "@xterm/xterm",

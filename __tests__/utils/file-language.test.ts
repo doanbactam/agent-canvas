@@ -1,6 +1,28 @@
 import { describe, it, expect } from "vitest";
 
-import { getShikiLanguageForFile } from "#/utils/file-language";
+import {
+  getShikiLanguageForExtension,
+  getShikiLanguageForFile,
+} from "#/utils/file-language";
+
+describe("getShikiLanguageForExtension", () => {
+  it("maps code-fence / file extensions to Shiki language ids", () => {
+    expect(getShikiLanguageForExtension("js")).toBe("javascript");
+    expect(getShikiLanguageForExtension("ts")).toBe("typescript");
+    expect(getShikiLanguageForExtension("py")).toBe("python");
+    expect(getShikiLanguageForExtension("rs")).toBe("rust");
+    expect(getShikiLanguageForExtension("sh")).toBe("bash");
+    expect(getShikiLanguageForExtension("dockerfile")).toBe("dockerfile");
+  });
+
+  it("is case-insensitive", () => {
+    expect(getShikiLanguageForExtension("JS")).toBe("javascript");
+  });
+
+  it("returns null for unknown extensions", () => {
+    expect(getShikiLanguageForExtension("xyz")).toBeNull();
+  });
+});
 
 describe("getShikiLanguageForFile", () => {
   it("maps common source-code extensions to their Shiki language ids", () => {

@@ -1,20 +1,20 @@
-import React from "react";
+import React, { useEffect, useMemo } from "react";
 import { createHighlighterCoreSync, hastToHtml } from "shiki/core";
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
 import type { Element, Root } from "hast";
-import type { LanguageRegistration, ThemeRegistration } from "@shikijs/types";
+import type {
+  LanguageRegistration,
+  ShikiTransformer,
+  ThemeRegistration,
+} from "@shikijs/types";
 import { useAgentServerUITheme } from "#/hooks/use-agent-server-ui-theme";
 import { cn } from "#/utils/utils";
-import { getShikiLanguageForFile } from "#/utils/file-language";
+import { getShikiLanguageForExtension } from "#/utils/file-language";
+import { SHIKI_LANGUAGE_REGISTRY } from "#/utils/shiki-language-registry";
 
-// Theme imports – keep these few because they are loaded into the highlighter
-// at creation time. Background/color are stripped later so the block inherits
-// the surrounding surface color instead of using the theme's hard-coded values.
 import darkPlus from "shiki/themes/dark-plus.mjs";
 import lightPlus from "shiki/themes/light-plus.mjs";
 
-// Language grammar imports. We only import the modules here; grammars are
-// compiled on first use by `loadLanguageSync` so creation stays instant.
 import batch from "shiki/langs/batch.mjs";
 import c from "shiki/langs/c.mjs";
 import clojure from "shiki/langs/clojure.mjs";
@@ -75,13 +75,11 @@ import xml from "shiki/langs/xml.mjs";
 import yaml from "shiki/langs/yaml.mjs";
 
 /**
- * Maps the canonical language ids returned by `getShikiLanguageForFile` (and by
- * `resolveCodeLanguage` for code-fence hints) to the Shiki grammar module that
- * should be loaded. Several ids can point to the same module (e.g. `bash` and
- * `shellsession` both load the shellsession grammar).
+ * Maps the loaded module variables to their `shiki/langs/<name>.mjs` file names.
+ * The canonical id -> module-name mapping lives in `shiki-language-registry.ts`
+ * so both the highlighter and `vite.config.ts` share one source of truth.
  */
-const LANGUAGE_MODULES: Record<string, LanguageRegistration[]> = {
-  bash: shellsession,
+const IMPORTED_MODULES_BY_NAME: Record<string, LanguageRegistration[]> = {
   batch,
   c,
   clojure,
@@ -142,45 +140,43 @@ const LANGUAGE_MODULES: Record<string, LanguageRegistration[]> = {
   yaml,
 };
 
-/**
- * Aliases that are not already covered by the file-extension mapping. These are
- * usually code-fence language hints like `console` or `shell`.
- */
-const LANGUAGE_ALIASES: Record<string, string> = {
-  bash: "bash",
+const LANGUAGE_MODULES: Record<string, LanguageRegistration[]> =
+  Object.fromEntries(
+    Object.entries(SHIKI_LANGUAGE_REGISTRY).map(([id, moduleName]) => [
+      id,
+      IMPORTED_MODULES_BY_NAME[moduleName],
+    ]),
+  );
+
+const TEXT_ALIASES = new Set(["text", "txt", "plain", "plaintext"]);
+
+const CODE_FENCE_ALIASES: Record<string, string> = {
+  console: "bash",
   shell: "bash",
   shellscript: "bash",
-  console: "bash",
-  zsh: "bash",
-  sh: "bash",
-  fish: "bash",
   docker: "dockerfile",
   make: "makefile",
   mk: "makefile",
-  gql: "graphql",
-  gradle: "groovy",
   terraform: "hcl",
   "c++": "cpp",
-  cxx: "cpp",
-  cc: "cpp",
-  hpp: "cpp",
-  hh: "cpp",
   objc: "objective-c",
-  text: "text",
-  txt: "text",
-  plain: "text",
-  plaintext: "text",
   https: "http",
   xhtml: "html",
-  htm: "html",
 };
 
+type ThemeName = "dark-plus" | "light-plus";
+
 /**
- * Global stylesheet for CSS-based line numbers. It is injected once the first
- * time a component with `showLineNumbers` is rendered. The color can be
- * overridden per-instance through the `--shiki-line-number-color` custom
- * property, which falls back to the app's border color.
+ * All grammars are loaded at module initialization time. This keeps the
+ * component render path pure (no side effects inside `useMemo`) while still
+ * giving synchronous highlighting for `react-markdown` code blocks.
  */
+const highlighter = createHighlighterCoreSync({
+  themes: [darkPlus as ThemeRegistration, lightPlus as ThemeRegistration],
+  langs: [...new Set(Object.values(LANGUAGE_MODULES))],
+  engine: createJavaScriptRegexEngine(),
+});
+
 const LINE_NUMBER_CSS = `
   .shiki-line-numbers { counter-reset: line; }
   .shiki-line-numbers .line::before {
@@ -195,23 +191,19 @@ const LINE_NUMBER_CSS = `
   }
 `;
 
-if (typeof document !== "undefined") {
-  const id = "shiki-line-numbers-css";
-  if (!document.getElementById(id)) {
+function useLineNumberStyles() {
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const id = "shiki-line-numbers-css";
+    if (document.getElementById(id)) return;
+
     const style = document.createElement("style");
     style.id = id;
     style.textContent = LINE_NUMBER_CSS;
     document.head.appendChild(style);
-  }
+  }, []);
 }
-
-const highlighter = createHighlighterCoreSync({
-  themes: [darkPlus as ThemeRegistration, lightPlus as ThemeRegistration],
-  langs: [],
-  engine: createJavaScriptRegexEngine(),
-});
-
-type ThemeName = "dark-plus" | "light-plus";
 
 export interface SyntaxHighlighterProps {
   language?: string;
@@ -242,75 +234,184 @@ function escapeHtml(str: string): string {
     .replace(/'/g, "&#039;");
 }
 
-function cssObjectToString(style: React.CSSProperties): string {
+function camelToKebab(str: string): string {
+  return str.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
+}
+
+function parseStyleString(style: string): Record<string, string> {
+  const result: Record<string, string> = {};
+  style.split(";").forEach((declaration) => {
+    const colon = declaration.indexOf(":");
+    if (colon === -1) return;
+
+    const key = declaration.slice(0, colon).trim();
+    const value = declaration.slice(colon + 1).trim();
+    if (!key || !value) return;
+
+    result[key] = value;
+  });
+  return result;
+}
+
+function styleRecordToString(
+  style: Record<string, string | number | undefined>,
+): string {
   return Object.entries(style)
-    .map(([k, v]) => {
-      if (v == null || v === "") return "";
-      const key = k.startsWith("--")
-        ? k
-        : k.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
-      return `${key}:${String(v)}`;
-    })
-    .filter(Boolean)
+    .filter(
+      ([, value]) => value !== undefined && value !== "" && value !== null,
+    )
+    .map(([key, value]) => `${key}:${String(value)}`)
     .join(";");
 }
 
-function resolveLanguage(language: string | undefined): string {
+function mergeStyleProperties(
+  base: Record<string, string>,
+  additions: React.CSSProperties | undefined,
+): Record<string, string> {
+  if (!additions) return base;
+
+  const merged = { ...base };
+  Object.entries(additions).forEach(([key, value]) => {
+    if (value == null || value === "") return;
+
+    const kebab = key.startsWith("--") ? key : camelToKebab(key);
+    merged[kebab] = String(value);
+  });
+
+  return merged;
+}
+
+function resolveCodeFenceLanguage(language: string | undefined): string {
   if (!language) return "text";
+
   const hint = language.toLowerCase().trim();
-  if (["text", "txt", "plain", "plaintext"].includes(hint)) return "text";
+  if (hint === "" || TEXT_ALIASES.has(hint)) return "text";
 
-  const alias = LANGUAGE_ALIASES[hint];
-  if (alias && ensureLanguageLoaded(alias)) return alias;
+  const alias = CODE_FENCE_ALIASES[hint];
+  if (alias) return alias;
 
-  const fromExtension = getShikiLanguageForFile(`x.${hint}`);
-  if (fromExtension && ensureLanguageLoaded(fromExtension))
-    return fromExtension;
+  const fromExtension = getShikiLanguageForExtension(hint);
+  if (fromExtension) return fromExtension;
 
-  if (ensureLanguageLoaded(hint)) return hint;
+  if (highlighter.getLoadedLanguages().includes(hint)) return hint;
 
   return "text";
 }
 
-function ensureLanguageLoaded(id: string): string | null {
-  if (highlighter.getLoadedLanguages().includes(id)) return id;
-  const mod = LANGUAGE_MODULES[id];
-  if (mod) {
-    try {
-      highlighter.loadLanguageSync(mod);
-      return id;
-    } catch {
-      // Fall back to plain text if a grammar fails to load.
-    }
+/* eslint-disable no-param-reassign */
+function buildHighlighterTransformer(
+  options: HighlightOptions,
+): ShikiTransformer {
+  const {
+    className,
+    customStyle,
+    wrapLongLines,
+    showLineNumbers,
+    lineNumberStyle,
+    codeTagProps,
+  } = options;
+
+  function mergeClassList(
+    existing: string | undefined,
+    additions: string[] | undefined,
+  ): string {
+    const classes = new Set((existing ?? "").split(/\s+/).filter(Boolean));
+    additions?.forEach((cls) => classes.add(cls));
+    return [...classes].join(" ");
   }
-  return null;
+
+  return {
+    name: "agent-canvas-syntax-highlighter",
+    pre(node) {
+      // `tabindex="0"` is added by Shiki but is unnecessary for read-only code
+      // blocks and can steal focus from surrounding controls.
+      delete node.properties.tabindex;
+
+      const additions: string[] = [];
+      if (showLineNumbers) additions.push("shiki-line-numbers");
+      if (className) additions.push(className);
+
+      node.properties.class = mergeClassList(
+        node.properties.class as string | undefined,
+        additions,
+      );
+
+      const style = parseStyleString((node.properties.style as string) ?? "");
+
+      // Strip the theme's default background/color so the block inherits the
+      // surrounding surface color. Callers can override through `customStyle`.
+      delete style["background-color"];
+      delete style["color"];
+
+      if (lineNumberStyle?.color) {
+        style["--shiki-line-number-color"] = String(lineNumberStyle.color);
+      }
+
+      if (wrapLongLines) {
+        style["white-space"] = "pre-wrap";
+        style["word-wrap"] = "break-word";
+      }
+
+      const mergedPreStyle = mergeStyleProperties(style, customStyle);
+
+      const styleStr = styleRecordToString(mergedPreStyle);
+      if (styleStr) {
+        node.properties.style = styleStr;
+      } else {
+        delete node.properties.style;
+      }
+    },
+    code(node) {
+      if (!codeTagProps) return;
+
+      if (codeTagProps.className) {
+        node.properties.class = mergeClassList(
+          node.properties.class as string | undefined,
+          [codeTagProps.className],
+        );
+      }
+
+      if (codeTagProps.style) {
+        const style = parseStyleString((node.properties.style as string) ?? "");
+        const mergedCodeStyle = mergeStyleProperties(style, codeTagProps.style);
+
+        const styleStr = styleRecordToString(mergedCodeStyle);
+        if (styleStr) {
+          node.properties.style = styleStr;
+        } else {
+          delete node.properties.style;
+        }
+      }
+    },
+  };
 }
+/* eslint-enable no-param-reassign */
 
 function highlightCode(
   code: string,
   language: string | undefined,
   theme: ThemeName,
-  props: HighlightOptions,
+  options: HighlightOptions,
 ): HighlightResult {
-  const {
-    className,
-    showLineNumbers,
-    wrapLongLines,
-    customStyle,
-    lineNumberStyle,
-    codeTagProps,
-  } = props;
+  const lang = resolveCodeFenceLanguage(language);
+  const transformer = buildHighlighterTransformer(options);
 
-  const lang = resolveLanguage(language);
   let root: Root;
   try {
     root = highlighter.codeToHast(code, {
       lang,
       theme,
       mergeSameStyleTokens: true,
+      transformers: [transformer],
     });
   } catch {
-    root = highlighter.codeToHast(escapeHtml(code), { lang: "text", theme });
+    // Defensive fallback to plain text if a grammar fails at runtime.
+    root = highlighter.codeToHast(code, {
+      lang: "text",
+      theme,
+      mergeSameStyleTokens: true,
+      transformers: [transformer],
+    });
   }
 
   const pre = root.children.find(
@@ -321,68 +422,46 @@ function highlightCode(
   if (!pre) {
     return {
       codeHtml: `<code>${escapeHtml(code)}</code>`,
-      rootClass: cn(showLineNumbers && "shiki-line-numbers", className),
+      rootClass: cn(
+        options.showLineNumbers && "shiki-line-numbers",
+        options.className,
+      ),
       rootStyle: "",
     };
   }
-
-  let preStyle = ((pre.properties.style as string) || "").trim();
-  preStyle = preStyle
-    .replace(/(?:^|;)\s*background-color:[^;]+;?/g, "")
-    .replace(/(?:^|;)\s*color:[^;]+;?/g, "")
-    .trim();
-
-  if (customStyle) {
-    const custom = cssObjectToString(customStyle);
-    if (custom) preStyle = preStyle ? `${preStyle};${custom}` : custom;
-  }
-
-  if (wrapLongLines) {
-    const wrap = "white-space:pre-wrap;word-wrap:break-word";
-    preStyle = preStyle ? `${preStyle};${wrap}` : wrap;
-  }
-
-  if (lineNumberStyle?.color) {
-    const lineColor = `--shiki-line-number-color:${String(lineNumberStyle.color)}`;
-    preStyle = preStyle ? `${preStyle};${lineColor}` : lineColor;
-  }
-
-  let preClass = ((pre.properties.class as string | undefined) ?? "").trim();
-  if (showLineNumbers) {
-    preClass = preClass
-      ? `${preClass} shiki-line-numbers`
-      : "shiki-line-numbers";
-  }
-  if (className) {
-    preClass = preClass ? `${preClass} ${className}` : className;
-  }
-
-  // `tabindex="0"` is added by Shiki but is unnecessary for read-only code
-  // blocks and can steal focus from surrounding controls.
-  delete pre.properties.tabindex;
 
   const codeEl = pre.children.find(
     (child): child is Element =>
       child.type === "element" && child.tagName === "code",
   );
 
-  if (codeEl && codeTagProps) {
-    if (codeTagProps.className) {
-      codeEl.properties.class =
-        `${((codeEl.properties.class as string) ?? "").trim()} ${codeTagProps.className}`.trim();
-    }
-    if (codeTagProps.style) {
-      const extra = cssObjectToString(
-        codeTagProps.style as React.CSSProperties,
-      );
-      const existing = ((codeEl.properties.style as string) || "").trim();
-      codeEl.properties.style =
-        existing && extra ? `${existing};${extra}` : existing || extra;
-    }
-  }
+  const codeHtml = codeEl
+    ? hastToHtml(codeEl)
+    : hastToHtml(pre.children as unknown as Element[]);
 
-  const codeHtml = hastToHtml(codeEl ?? pre.children);
-  return { codeHtml, rootClass: preClass, rootStyle: preStyle };
+  return {
+    codeHtml,
+    rootClass: String(pre.properties.class ?? ""),
+    rootStyle: String(pre.properties.style ?? ""),
+  };
+}
+
+function styleStringToObject(style: string): React.CSSProperties {
+  const obj: React.CSSProperties = {};
+  style.split(";").forEach((declaration) => {
+    const colon = declaration.indexOf(":");
+    if (colon === -1) return;
+
+    const key = declaration.slice(0, colon).trim();
+    const value = declaration.slice(colon + 1).trim();
+    if (!key || !value) return;
+
+    const reactKey = key.startsWith("--")
+      ? key
+      : key.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+    (obj as Record<string, string>)[reactKey] = value;
+  });
+  return obj;
 }
 
 export function SyntaxHighlighter({
@@ -396,13 +475,17 @@ export function SyntaxHighlighter({
   lineNumberStyle,
   codeTagProps,
 }: SyntaxHighlighterProps) {
+  useLineNumberStyles();
+
   const theme: ThemeName =
     useAgentServerUITheme() === "dark" ? "dark-plus" : "light-plus";
+
   const code =
     typeof children === "string"
       ? children.replace(/\n$/, "")
       : String(children);
-  const { codeHtml, rootClass, rootStyle } = React.useMemo(
+
+  const { codeHtml, rootClass, rootStyle } = useMemo(
     () =>
       highlightCode(code, language, theme, {
         className,
@@ -430,20 +513,4 @@ export function SyntaxHighlighter({
     style: styleStringToObject(rootStyle),
     dangerouslySetInnerHTML: { __html: codeHtml },
   });
-}
-
-function styleStringToObject(style: string): React.CSSProperties {
-  const obj: React.CSSProperties = {};
-  style.split(";").forEach((decl) => {
-    const colon = decl.indexOf(":");
-    if (colon === -1) return;
-    const key = decl.slice(0, colon).trim();
-    const value = decl.slice(colon + 1).trim();
-    if (!key || !value) return;
-    const reactKey = key.startsWith("--")
-      ? key
-      : key.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
-    (obj as Record<string, string>)[reactKey] = value;
-  });
-  return obj;
 }
