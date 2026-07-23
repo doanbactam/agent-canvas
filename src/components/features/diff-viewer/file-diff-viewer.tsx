@@ -58,10 +58,31 @@ export interface FileDiffViewerProps {
 }
 
 function splitRenamePath(path: string) {
-  const parts = path.split(/\s+/);
-  const oldName = parts[1] ?? path;
-  const newName = parts[parts.length - 1] ?? path;
-  return { oldName, newName };
+  const trimmed = path.trim();
+
+  const braceMatch = trimmed.match(/^(.*)\{(.*?)\s*(?:=>|->)\s*(.*?)\}(.*)$/);
+  if (braceMatch) {
+    const [, prefix, oldPart, newPart, suffix] = braceMatch;
+    return {
+      oldName: `${prefix}${oldPart}${suffix}`.trim() || path,
+      newName: `${prefix}${newPart}${suffix}`.trim() || path,
+    };
+  }
+
+  const arrowMatch = trimmed.match(/^(.*?)\s*(?:=>|->)\s*(.*)$/);
+  if (arrowMatch) {
+    return {
+      oldName: arrowMatch[1].trim() || path,
+      newName: arrowMatch[2].trim() || path,
+    };
+  }
+
+  const parts = trimmed.split(/\s+/);
+  if (parts.length >= 2) {
+    return { oldName: parts[0], newName: parts[parts.length - 1] };
+  }
+
+  return { oldName: path, newName: path };
 }
 
 export function FileDiffViewer({ path, type, commit }: FileDiffViewerProps) {
