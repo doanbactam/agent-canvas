@@ -25,6 +25,72 @@ const LIB_EXTERNALS = [
 ];
 const APP_CHUNK_MAX_BYTES = 450 * 1024;
 
+// Languages registered by the Shiki-based SyntaxHighlighter. They are listed
+// explicitly here because `optimizeDeps.noDiscovery` is enabled below; Vite
+// needs to know about them ahead of time so it does not try to optimize them
+// on first render, which Safari cannot recover from.
+const SHIKI_LANGUAGES = [
+  "bash",
+  "batch",
+  "c",
+  "clojure",
+  "cpp",
+  "csharp",
+  "css",
+  "dart",
+  "diff",
+  "dockerfile",
+  "elixir",
+  "erlang",
+  "fsharp",
+  "go",
+  "graphql",
+  "groovy",
+  "haskell",
+  "hcl",
+  "html",
+  "http",
+  "ini",
+  "java",
+  "javascript",
+  "json",
+  "json5",
+  "jsx",
+  "julia",
+  "kotlin",
+  "less",
+  "lua",
+  "makefile",
+  "markdown",
+  "matlab",
+  "nginx",
+  "nix",
+  "objective-c",
+  "ocaml",
+  "perl",
+  "php",
+  "powershell",
+  "properties",
+  "protobuf",
+  "python",
+  "r",
+  "regex",
+  "ruby",
+  "rust",
+  "sass",
+  "scala",
+  "scss",
+  "shellsession",
+  "solidity",
+  "sql",
+  "swift",
+  "toml",
+  "tsx",
+  "typescript",
+  "xml",
+  "yaml",
+];
+
 const normalizeBasePath = (value?: string) => {
   const raw = value?.trim();
   if (!raw || raw === "/") return "/";
@@ -62,18 +128,18 @@ const appBuildConfig = {
           },
           {
             // Keep the markdown / syntax-highlight ecosystem
-            // (react-syntax-highlighter + refractor/lowlight/highlight.js and
-            // the unified/hast/mdast/micromark/vfile module tree it pulls in)
-            // in one un-size-split chunk. Same failure mode as vendor-styling
-            // above: once the file-viewer (HighlightedSourceView) is imported
-            // from a second route, the generic size-split vendor group slices
-            // this tree across chunk boundaries, so a vfile/unified module's
-            // interop `require` shim can evaluate before the chunk that defines
-            // it, throwing "TypeError: i is not a function" at module load and
-            // blanking the whole app (the shared home/conversation/files-tab
-            // chunk fails to load → route-module reload loop).
+            // (Shiki, hast-util-to-html, and the unified/hast/mdast/micromark/
+            // remark/rehype/vfile module tree it pulls in) in one un-size-split
+            // chunk. Same failure mode as vendor-styling above: once the
+            // file-viewer (HighlightedSourceView) is imported from a second route,
+            // the generic size-split vendor group slices this tree across chunk
+            // boundaries, so a vfile/unified module's interop `require` shim
+            // can evaluate before the chunk that defines it, throwing
+            // "TypeError: i is not a function" at module load and blanking the
+            // whole app (the shared home/conversation/files-tab chunk fails to
+            // load → route-module reload loop).
             name: "vendor-markdown",
-            test: /node_modules[\\/](react-syntax-highlighter[\\/]|refractor[\\/]|lowlight[\\/]|highlight\.js[\\/]|hastscript[\\/]|(hast|mdast|unist|micromark|remark|rehype)[^\\/]*[\\/]|unified[\\/]|vfile[^\\/]*[\\/]|property-information[\\/]|(comma|space)-separated-tokens[\\/]|character-entities[^\\/]*[\\/]|(parse|stringify)-entities[\\/]|decode-named-character-reference[\\/]|bail[\\/]|trough[\\/]|is-plain-obj[\\/]|zwitch[\\/]|longest-streak[\\/]|ccount[\\/]|escape-string-regexp[\\/]|markdown-table[\\/]|devlop[\\/])/,
+            test: /node_modules[\\/](shiki[\\/]|@shikijs[\\/]|hastscript[\\/]|(hast|mdast|unist|micromark|remark|rehype)[^\\/]*[\\/]|unified[\\/]|vfile[^\\/]*[\\/]|property-information[\\/]|(comma|space)-separated-tokens[\\/]|character-entities[^\\/]*[\\/]|(parse|stringify)-entities[\\/]|decode-named-character-reference[\\/]|bail[\\/]|trough[\\/]|is-plain-obj[\\/]|zwitch[\\/]|longest-streak[\\/]|ccount[\\/]|escape-string-regexp[\\/]|markdown-table[\\/]|devlop[\\/])/,
           },
           {
             name: "vendor",
@@ -278,9 +344,16 @@ export default defineConfig(({ mode }) => {
         "react-markdown",
         "remark-gfm",
         "remark-breaks",
-        "react-syntax-highlighter",
-        "react-syntax-highlighter/dist/esm/styles/prism",
-        "react-syntax-highlighter/dist/esm/styles/hljs",
+        // Shiki syntax highlighting (core, engine, themes, and the explicit
+        // language allowlist used by SyntaxHighlighter). Pre-bundled here
+        // because `noDiscovery` is enabled; runtime optimization of these
+        // ESM subpaths triggers reload loops in Safari.
+        "shiki",
+        "shiki/core",
+        "shiki/engine/javascript",
+        "shiki/themes/dark-plus.mjs",
+        "shiki/themes/light-plus.mjs",
+        ...SHIKI_LANGUAGES.map((lang) => `shiki/langs/${lang}.mjs`),
         // Terminal dependencies - added to prevent runtime optimization
         "@xterm/addon-fit",
         "@xterm/xterm",
@@ -308,67 +381,6 @@ export default defineConfig(({ mode }) => {
         "uuid",
         "zustand",
         "zustand/middleware",
-        // Syntax highlighter language definitions - Safari fails if these are
-        // optimized at runtime. Include all commonly used languages.
-        "react-syntax-highlighter/dist/esm/languages/prism/bash",
-        "react-syntax-highlighter/dist/esm/languages/prism/batch",
-        "react-syntax-highlighter/dist/esm/languages/prism/c",
-        "react-syntax-highlighter/dist/esm/languages/prism/clike",
-        "react-syntax-highlighter/dist/esm/languages/prism/clojure",
-        "react-syntax-highlighter/dist/esm/languages/prism/cpp",
-        "react-syntax-highlighter/dist/esm/languages/prism/csharp",
-        "react-syntax-highlighter/dist/esm/languages/prism/css",
-        "react-syntax-highlighter/dist/esm/languages/prism/dart",
-        "react-syntax-highlighter/dist/esm/languages/prism/diff",
-        "react-syntax-highlighter/dist/esm/languages/prism/docker",
-        "react-syntax-highlighter/dist/esm/languages/prism/elixir",
-        "react-syntax-highlighter/dist/esm/languages/prism/erlang",
-        "react-syntax-highlighter/dist/esm/languages/prism/fsharp",
-        "react-syntax-highlighter/dist/esm/languages/prism/go",
-        "react-syntax-highlighter/dist/esm/languages/prism/graphql",
-        "react-syntax-highlighter/dist/esm/languages/prism/groovy",
-        "react-syntax-highlighter/dist/esm/languages/prism/haskell",
-        "react-syntax-highlighter/dist/esm/languages/prism/hcl",
-        "react-syntax-highlighter/dist/esm/languages/prism/http",
-        "react-syntax-highlighter/dist/esm/languages/prism/ini",
-        "react-syntax-highlighter/dist/esm/languages/prism/java",
-        "react-syntax-highlighter/dist/esm/languages/prism/javascript",
-        "react-syntax-highlighter/dist/esm/languages/prism/json",
-        "react-syntax-highlighter/dist/esm/languages/prism/json5",
-        "react-syntax-highlighter/dist/esm/languages/prism/jsx",
-        "react-syntax-highlighter/dist/esm/languages/prism/julia",
-        "react-syntax-highlighter/dist/esm/languages/prism/kotlin",
-        "react-syntax-highlighter/dist/esm/languages/prism/less",
-        "react-syntax-highlighter/dist/esm/languages/prism/lua",
-        "react-syntax-highlighter/dist/esm/languages/prism/makefile",
-        "react-syntax-highlighter/dist/esm/languages/prism/markdown",
-        "react-syntax-highlighter/dist/esm/languages/prism/markup",
-        "react-syntax-highlighter/dist/esm/languages/prism/matlab",
-        "react-syntax-highlighter/dist/esm/languages/prism/nginx",
-        "react-syntax-highlighter/dist/esm/languages/prism/nix",
-        "react-syntax-highlighter/dist/esm/languages/prism/objectivec",
-        "react-syntax-highlighter/dist/esm/languages/prism/ocaml",
-        "react-syntax-highlighter/dist/esm/languages/prism/perl",
-        "react-syntax-highlighter/dist/esm/languages/prism/php",
-        "react-syntax-highlighter/dist/esm/languages/prism/powershell",
-        "react-syntax-highlighter/dist/esm/languages/prism/properties",
-        "react-syntax-highlighter/dist/esm/languages/prism/protobuf",
-        "react-syntax-highlighter/dist/esm/languages/prism/python",
-        "react-syntax-highlighter/dist/esm/languages/prism/r",
-        "react-syntax-highlighter/dist/esm/languages/prism/regex",
-        "react-syntax-highlighter/dist/esm/languages/prism/ruby",
-        "react-syntax-highlighter/dist/esm/languages/prism/rust",
-        "react-syntax-highlighter/dist/esm/languages/prism/sass",
-        "react-syntax-highlighter/dist/esm/languages/prism/scala",
-        "react-syntax-highlighter/dist/esm/languages/prism/scss",
-        "react-syntax-highlighter/dist/esm/languages/prism/shell-session",
-        "react-syntax-highlighter/dist/esm/languages/prism/solidity",
-        "react-syntax-highlighter/dist/esm/languages/prism/sql",
-        "react-syntax-highlighter/dist/esm/languages/prism/swift",
-        "react-syntax-highlighter/dist/esm/languages/prism/toml",
-        "react-syntax-highlighter/dist/esm/languages/prism/tsx",
-        "react-syntax-highlighter/dist/esm/languages/prism/typescript",
-        "react-syntax-highlighter/dist/esm/languages/prism/yaml",
       ],
     },
     server: {
@@ -429,7 +441,10 @@ export default defineConfig(({ mode }) => {
       },
     },
     ssr: {
-      noExternal: ["react-syntax-highlighter"],
+      // Shiki subpaths and @shikijs/* engine/theme packages are ESM and use
+      // dynamic imports for the wasm/grammar catalog; bundling them avoids
+      // Node resolution issues during SSR.
+      noExternal: ["shiki", /^@shikijs\//],
     },
     clearScreen: false,
     test: {

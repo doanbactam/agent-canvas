@@ -1,18 +1,17 @@
-// Map a workspace-file path to a Prism grammar name (or `null` when we
-// don't have a registered grammar for it, in which case the caller should
-// fall back to plain pre/text rendering).
+// Map a workspace-file path to a Shiki language id (or `null` when we don't
+// have a registered grammar for it, in which case the caller should fall
+// back to plain pre/text rendering).
 //
-// We rely on the language allowlist already registered in
-// `src/components/features/markdown/syntax-highlighter.ts` — every entry
-// here MUST resolve to either a language name or an alias that file
-// registers, otherwise PrismLight will fall back to no highlighting at
-// all (and log a warning).
+// We rely on the language allowlist already imported in
+// `src/components/features/markdown/syntax-highlighter.ts` — every entry here
+// MUST resolve to a canonical id in that module's `LANGUAGE_MODULES` map,
+// otherwise the highlighter will simply fall back to `text`.
 //
 // Two lookup keys are tried, in order:
 //   1. The lowercased final-segment extension (`tsx`, `py`, `yaml`, …).
 //   2. A few well-known no-extension filenames (`Dockerfile`, `Makefile`).
-// We deliberately keep this list tight: every entry maps a real file
-// users see in workspaces to a grammar Prism actually understands.
+// We deliberately keep this list tight: every entry maps a real file users see
+// in workspaces to a grammar Shiki actually understands.
 const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   // JS / TS family
   js: "javascript",
@@ -28,10 +27,10 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   pyw: "python",
 
   // Web
-  html: "markup",
-  htm: "markup",
-  svg: "markup",
-  xml: "markup",
+  html: "html",
+  htm: "html",
+  svg: "html",
+  xml: "xml",
   css: "css",
   scss: "scss",
   sass: "sass",
@@ -82,8 +81,8 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   rb: "ruby",
   php: "php",
   swift: "swift",
-  m: "objectivec",
-  mm: "objectivec",
+  m: "objective-c",
+  mm: "objective-c",
 
   // Functional
   hs: "haskell",
@@ -111,7 +110,7 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   // Infrastructure
   tf: "hcl",
   hcl: "hcl",
-  dockerfile: "docker",
+  dockerfile: "dockerfile",
 
   // Misc text
   sql: "sql",
@@ -122,10 +121,14 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   patch: "diff",
   nix: "nix",
   sol: "solidity",
+  nginx: "nginx",
+  http: "http",
+  regex: "regex",
+  matlab: "matlab",
 };
 
 const FILENAME_TO_LANGUAGE: Record<string, string> = {
-  dockerfile: "docker",
+  dockerfile: "dockerfile",
   makefile: "makefile",
   gnumakefile: "makefile",
   ".bashrc": "bash",
@@ -150,12 +153,11 @@ function getBasename(path: string): string {
 }
 
 /**
- * Resolve a path (and optionally a MIME type) to a Prism grammar name.
+ * Resolve a path (and optionally a MIME type) to a Shiki language id.
  * Returns `null` when no grammar matches — the caller should then render
- * the source as plain text rather than feeding "unknown" to Prism (which
- * still produces an extra wrapper with no highlighting).
+ * the source as plain text rather than feeding "unknown" to the highlighter.
  */
-export function getPrismLanguageForFile(
+export function getShikiLanguageForFile(
   path: string,
   mimeType?: string,
 ): string | null {
@@ -171,7 +173,7 @@ export function getPrismLanguageForFile(
   // MIME-type fallbacks for the handful of cases where the path lacks a
   // useful extension but the server told us what it is.
   if (mimeType) {
-    if (mimeType === "text/html") return "markup";
+    if (mimeType === "text/html") return "html";
     if (mimeType === "text/css") return "css";
     if (mimeType === "application/json") return "json";
     if (mimeType === "text/markdown") return "markdown";

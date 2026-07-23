@@ -1,6 +1,5 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { SyntaxHighlighter } from "../../../markdown/syntax-highlighter";
 import { CopyableContentWrapper } from "#/components/shared/buttons/copyable-content-wrapper";
 import { MAX_CONTENT_LENGTH } from "#/components/conversation-events/chat/event-content-helpers/shared";
@@ -8,7 +7,7 @@ import { I18nKey } from "#/i18n/declaration";
 
 interface CodeBlockProps {
   code: string;
-  /** Prism language hint (e.g. "bash", "python"). */
+  /** Shiki language hint (e.g. "bash", "python"). */
   language?: string;
   /** Show a copy button on hover. Defaults to true. */
   copy?: boolean;
@@ -49,15 +48,10 @@ export function CodeBlock({
 
   const block = (
     <SyntaxHighlighter
-      className="rounded-lg text-xs"
-      style={vscDarkPlus}
+      className="rounded-lg text-xs bg-surface-raised"
       language={language}
       PreTag="div"
       wrapLongLines={wrapLongLines}
-      customStyle={wrapLongLines ? { whiteSpace: "pre-wrap" } : undefined}
-      codeTagProps={
-        wrapLongLines ? { style: { whiteSpace: "pre-wrap" } } : undefined
-      }
     >
       {text}
     </SyntaxHighlighter>
