@@ -106,13 +106,13 @@ describe("package library metadata", () => {
 
   it("ships runtime logger dependencies for the published CLI", () => {
     expect(packageJson.dependencies).toMatchObject({
-      winston: "3.19.0",
-      "winston-daily-rotate-file": "5.0.0",
+      "rotating-file-stream": "3.2.9",
+      ofetch: "1.5.1",
     });
-    expect(packageJson.devDependencies?.winston).toBeUndefined();
     expect(
-      packageJson.devDependencies?.["winston-daily-rotate-file"],
+      packageJson.devDependencies?.["rotating-file-stream"],
     ).toBeUndefined();
+    expect(packageJson.devDependencies?.ofetch).toBeUndefined();
   });
 
   it("uses local dev commands without Docker", () => {

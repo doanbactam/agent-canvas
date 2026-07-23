@@ -10,10 +10,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AxiosError, AxiosHeaders } from "axios";
 import { HttpError } from "@openhands/typescript-client";
 import type { AppConversation } from "#/api/conversation-service/agent-server-conversation-service.types";
 import { useBashCommandLogs } from "#/hooks/query/use-bash-command-logs";
+
+function createBashError(message: string, status?: number): Error {
+  const err = new Error(message);
+  if (status !== undefined) {
+    (err as { response?: { status: number; data?: unknown } }).response = {
+      status,
+      data: {},
+    };
+  } else {
+    (err as { isAxiosError?: true }).isAxiosError = true;
+  }
+  return err;
+}
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -174,23 +186,8 @@ describe("useBashCommandLogs — cloud sandbox state handling", () => {
         conversation_url: "https://runtime.example.com",
         sandbox_status: "RUNNING",
       });
-      const headers = new AxiosHeaders();
       listOutputsMock.mockRejectedValueOnce(
-        new AxiosError(
-          `Request failed with status code ${status}`,
-          "ERR",
-          {
-            headers,
-          } as never,
-          null,
-          {
-            status,
-            data: {},
-            statusText: "",
-            headers,
-            config: { headers },
-          } as never,
-        ),
+        createBashError(`Request failed with status code ${status}`, status),
       );
 
       const { result } = renderHook(
@@ -217,9 +214,7 @@ describe("useBashCommandLogs — cloud sandbox state handling", () => {
       conversation_url: "https://runtime.example.com",
       sandbox_status: "RUNNING",
     });
-    const err = new AxiosError("Network Error", "ERR_NETWORK");
-    err.response = undefined;
-    listOutputsMock.mockRejectedValueOnce(err);
+    listOutputsMock.mockRejectedValueOnce(createBashError("Network Error"));
 
     const { result } = renderHook(
       () =>
@@ -240,16 +235,7 @@ describe("useBashCommandLogs — cloud sandbox state handling", () => {
       conversation_url: "https://runtime.example.com",
       sandbox_status: "RUNNING",
     });
-    const headers = new AxiosHeaders();
-    listOutputsMock.mockRejectedValueOnce(
-      new AxiosError("Forbidden", "ERR", { headers } as never, null, {
-        status: 403,
-        data: {},
-        statusText: "Forbidden",
-        headers,
-        config: { headers },
-      } as never),
-    );
+    listOutputsMock.mockRejectedValueOnce(createBashError("Forbidden", 403));
 
     const { result } = renderHook(
       () =>

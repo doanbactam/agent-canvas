@@ -1,4 +1,4 @@
-import axios from "axios";
+import { ofetch } from "ofetch";
 import { getLockedCloudAuthMode } from "./agent-server-config";
 
 export const MAIN_APP_AUTHENTICATE_PATH = "/api/authenticate";
@@ -23,12 +23,18 @@ export function shouldUseMainAppCookieAuth(): boolean {
 
 export async function authenticateWithMainAppCookie(): Promise<boolean> {
   try {
-    await axios.post(MAIN_APP_AUTHENTICATE_PATH, null, {
-      withCredentials: true,
+    await ofetch(MAIN_APP_AUTHENTICATE_PATH, {
+      method: "POST",
+      credentials: "include",
     });
     return true;
   } catch (error) {
-    if (axios.isAxiosError(error) && error.response?.status === 401) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "status" in error &&
+      error.status === 401
+    ) {
       return false;
     }
     throw error;

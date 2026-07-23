@@ -3,14 +3,14 @@ import { useTranslation } from "react-i18next";
 import { FileDiff, File } from "@pierre/diffs/react";
 import { parseDiffFromFile, type FileDiffMetadata } from "@pierre/diffs";
 import {
-  LuFileDiff,
-  LuFileMinus,
-  LuFilePlus,
-  LuHistory,
-  LuGitCompareArrows,
-  LuFileCheck,
-} from "react-icons/lu";
-import { IconType } from "react-icons/lib";
+  FileDiff as FileDiffIcon,
+  FileMinus,
+  FilePlus,
+  History,
+  GitCompareArrows,
+  FileCheck,
+  type LucideIcon,
+} from "lucide-react";
 import { GitChangeStatus } from "#/api/open-hands.types";
 import { I18nKey } from "#/i18n/declaration";
 import { getLanguageFromPath } from "#/utils/get-language-from-path";
@@ -25,16 +25,16 @@ import { CodeDiffContainer } from "./code-diff-container";
 
 type ViewMode = "diff" | "old" | "new";
 
-const VIEW_MODES: { mode: ViewMode; icon: IconType }[] = [
-  { mode: "old", icon: LuHistory },
-  { mode: "diff", icon: LuGitCompareArrows },
-  { mode: "new", icon: LuFileCheck },
+const VIEW_MODES: { mode: ViewMode; icon: LucideIcon }[] = [
+  { mode: "old", icon: History },
+  { mode: "diff", icon: GitCompareArrows },
+  { mode: "new", icon: FileCheck },
 ];
 
-const STATUS_MAP: Record<GitChangeStatus, string | IconType> = {
-  A: LuFilePlus,
-  D: LuFileMinus,
-  M: LuFileDiff,
+const STATUS_MAP: Record<GitChangeStatus, string | LucideIcon> = {
+  A: FilePlus,
+  D: FileMinus,
+  M: FileDiffIcon,
   R: "Renamed",
   U: "Untracked",
 };

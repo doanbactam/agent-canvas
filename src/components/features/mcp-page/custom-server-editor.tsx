@@ -1,5 +1,5 @@
 import React from "react";
-import { AxiosError } from "axios";
+import type { AxiosError } from "#/utils/axios-error";
 import { useTranslation } from "react-i18next";
 import { I18nKey } from "#/i18n/declaration";
 import { ModalBackdrop } from "#/components/shared/modals/modal-backdrop";

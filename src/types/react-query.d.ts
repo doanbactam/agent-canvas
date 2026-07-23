@@ -1,5 +1,5 @@
 import "@tanstack/react-query";
-import type { AxiosError } from "axios";
+import type { AxiosError } from "#/utils/axios-error";
 
 interface MyMeta extends Record<string, unknown> {
   disableToast?: boolean;

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { FaTriangleExclamation } from "react-icons/fa6";
+import { TriangleAlert } from "lucide-react";
 import { I18nKey } from "#/i18n/declaration";
 import { useNavigation } from "#/context/navigation-context";
 import { useLlmConfigured } from "#/hooks/use-llm-configured";
@@ -33,7 +33,7 @@ export function LlmNotConfiguredBanner() {
     >
       <div className="flex min-w-0 items-start sm:items-center">
         <div className="flex-shrink-0">
-          <FaTriangleExclamation className="align-middle text-yellow-400" />
+          <TriangleAlert className="align-middle text-yellow-400" />
         </div>
         <Typography.Text className="ml-3 text-sm font-medium">
           {t(I18nKey.HOME$LLM_NOT_CONFIGURED_MESSAGE)}

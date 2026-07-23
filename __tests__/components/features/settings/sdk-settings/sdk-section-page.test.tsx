@@ -1,6 +1,5 @@
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AxiosError } from "axios";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -767,7 +766,7 @@ describe("SdkSectionPage", () => {
       buildSavableSettings(),
     );
     vi.spyOn(SettingsService, "saveSettings").mockRejectedValue(
-      new AxiosError("Request failed"),
+      new Error("Request failed"),
     );
     const displayErrorToastSpy = vi.spyOn(ToastHandlers, "displayErrorToast");
 

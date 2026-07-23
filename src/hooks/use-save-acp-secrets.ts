@@ -1,7 +1,7 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
-import { AxiosError } from "axios";
+import type { AxiosError } from "#/utils/axios-error";
 import { I18nKey } from "#/i18n/declaration";
 import { useCreateSecret } from "#/hooks/mutation/use-create-secret";
 import { type ACPProviderSecretField } from "#/constants/acp-providers";

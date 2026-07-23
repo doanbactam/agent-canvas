@@ -1,7 +1,6 @@
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { AxiosError } from "axios";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import SettingsService from "#/api/settings-service/settings-service.api";
 import McpService from "#/api/mcp-service/mcp-service.api";
@@ -135,11 +134,11 @@ describe("CustomServerEditor", () => {
     // all, and the modal closed even on a 4xx/5xx because
     // tanstack-query's per-call `onSuccess` doesn't run on
     // rejection but didn't gate the close either way.
-    const err = new AxiosError("Boom");
+    const err = new Error("Boom") as { response?: { status: number; data: unknown } };
     err.response = {
       status: 400,
       data: { detail: "Server name already in use" },
-    } as unknown as AxiosError["response"];
+    };
     const saveSpy = vi
       .spyOn(SettingsService, "saveSettings")
       .mockRejectedValue(err);

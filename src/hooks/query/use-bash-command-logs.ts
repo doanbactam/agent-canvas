@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
+import { isAxiosError } from "#/utils/axios-error";
 import { isSdkHttpError } from "#/api/agent-server-compatibility";
 import BashService from "#/api/bash-service/bash-service.api";
 import { useActiveBackend } from "#/contexts/active-backend-context";
@@ -66,8 +66,8 @@ function sandboxIssueFromStatus(
  * axios-shaped errors are still recognized as well.
  */
 function classifyFetchError(error: unknown): SandboxIssue | null {
-  const status = axios.isAxiosError(error)
-    ? error.response?.status
+  const status = isAxiosError(error)
+    ? (error.response?.status ?? error.status)
     : isSdkHttpError(error)
       ? (error as { status: number }).status
       : undefined;
@@ -77,11 +77,11 @@ function classifyFetchError(error: unknown): SandboxIssue | null {
     // collapse 401/403 here — those are auth bugs we want to surface.
     return status === 404 || status >= 500 ? "unreachable" : null;
   }
-  // No status → the request never got a response. Axios reports these as
-  // response-less errors; fetch (the shared client) throws `TypeError`
-  // for network failures and `AbortError`/`TimeoutError` for timeouts,
-  // sometimes wrapped in a plain `Error` with the original as `cause`.
-  if (axios.isAxiosError(error) || error instanceof TypeError) {
+  // No status → the request never got a response. Axios/fetch report these as
+  // response-less errors; the shared client throws `TypeError` for network
+  // failures and `AbortError`/`TimeoutError` for timeouts, sometimes wrapped
+  // in a plain `Error` with the original as `cause`.
+  if (isAxiosError(error) || error instanceof TypeError) {
     return "unreachable";
   }
   if (error instanceof Error) {

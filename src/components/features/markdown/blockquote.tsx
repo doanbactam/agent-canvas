@@ -1,19 +1,19 @@
 import React from "react";
 import { ExtraProps } from "react-markdown";
 import {
-  FaCircleInfo,
-  FaLightbulb,
-  FaCircleExclamation,
-  FaTriangleExclamation,
-  FaCircleStop,
-} from "react-icons/fa6";
-import type { IconType } from "react-icons";
+  Info,
+  Lightbulb,
+  CircleAlert,
+  TriangleAlert,
+  CircleStop,
+  type LucideIcon,
+} from "lucide-react";
 import type { AlertType } from "./remark-github-alerts";
 import { cn } from "#/utils/utils";
 
 interface AlertConfig {
   label: string;
-  icon: IconType;
+  icon: LucideIcon;
   // Per-alert color overrides. We stick to Tailwind palette utilities so
   // the classes show up in the source for the v4 content scanner.
   containerClass: string;
@@ -24,35 +24,35 @@ interface AlertConfig {
 const ALERT_CONFIG: Record<AlertType, AlertConfig> = {
   note: {
     label: "Note",
-    icon: FaCircleInfo,
+    icon: Info,
     containerClass: "border-l-blue-500 bg-blue-500/10",
     titleClass: "text-blue-300",
     iconClass: "text-blue-400",
   },
   tip: {
     label: "Tip",
-    icon: FaLightbulb,
+    icon: Lightbulb,
     containerClass: "border-l-emerald-500 bg-emerald-500/10",
     titleClass: "text-emerald-300",
     iconClass: "text-emerald-400",
   },
   important: {
     label: "Important",
-    icon: FaCircleExclamation,
+    icon: CircleAlert,
     containerClass: "border-l-purple-500 bg-purple-500/10",
     titleClass: "text-purple-300",
     iconClass: "text-purple-400",
   },
   warning: {
     label: "Warning",
-    icon: FaTriangleExclamation,
+    icon: TriangleAlert,
     containerClass: "border-l-yellow-500 bg-yellow-500/10",
     titleClass: "text-yellow-300",
     iconClass: "text-yellow-400",
   },
   caution: {
     label: "Caution",
-    icon: FaCircleStop,
+    icon: CircleStop,
     containerClass: "border-l-rose-500 bg-rose-500/10",
     titleClass: "text-rose-300",
     iconClass: "text-rose-400",

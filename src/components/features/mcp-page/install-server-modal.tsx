@@ -1,6 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { AxiosError } from "axios";
+import type { AxiosError } from "#/utils/axios-error";
 import { v4 as uuidv4 } from "uuid";
 import { ModalBackdrop } from "#/components/shared/modals/modal-backdrop";
 import { ModalCloseButton } from "#/components/shared/modals/modal-close-button";

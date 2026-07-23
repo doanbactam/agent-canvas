@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, type Mock } from "vitest";
-import { AxiosError } from "axios";
+
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "test-utils";
@@ -279,7 +279,7 @@ describe("LlmSettingsLocalView", () => {
   });
 
   it("shows error message when profiles fail to load", () => {
-    const mockError = new AxiosError("Network error");
+    const mockError = new Error("Network error");
     vi.mocked(useLlmProfilesHook.useLlmProfiles).mockReturnValue(
       createMockLlmProfilesReturn({
         data: undefined,

@@ -1,5 +1,5 @@
-import { LuFileDiff } from "react-icons/lu";
+import { FileDiff } from "lucide-react";
 
 export function DiffDrawerIcon() {
-  return <LuFileDiff aria-hidden className="size-full" />;
+  return <FileDiff aria-hidden className="size-full" />;
 }

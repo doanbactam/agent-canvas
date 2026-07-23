@@ -7,21 +7,14 @@ import type { Backend } from "#/api/backend-registry/types";
 import type { Automation, AutomationSpec } from "#/types/automation";
 import AutomationService from "./automation-service.api";
 
-const { localAxios, callCloudProxy } = vi.hoisted(() => ({
-  localAxios: {
-    interceptors: { request: { use: vi.fn() } },
-    get: vi.fn(),
-    post: vi.fn(),
-    patch: vi.fn(),
-    delete: vi.fn(),
-  },
+const { localOfetch, callCloudProxy } = vi.hoisted(() => ({
+  localOfetch: vi.fn(),
   callCloudProxy: vi.fn(),
 }));
 
-vi.mock("axios", () => ({
-  default: {
-    create: () => localAxios,
-    post: vi.fn(),
+vi.mock("ofetch", () => ({
+  ofetch: {
+    create: () => localOfetch,
   },
 }));
 
@@ -85,13 +78,14 @@ describe("AutomationService.getSdkVersion", () => {
   });
 
   it("fetches the local automation SDK version from the automation sidecar", async () => {
-    localAxios.get.mockResolvedValueOnce({ data: { sdk_version: "1.36.1" } });
+    localOfetch.mockResolvedValueOnce({ sdk_version: "1.36.1" });
 
     await expect(AutomationService.getSdkVersion()).resolves.toBe("1.36.1");
 
-    expect(localAxios.get).toHaveBeenCalledWith("/api/automation/sdk-version", {
-      timeout: 5000,
-    });
+    expect(localOfetch).toHaveBeenCalledWith(
+      "/api/automation/sdk-version",
+      expect.objectContaining({ method: "GET", timeout: 5000 }),
+    );
   });
 
   it("fetches the cloud automation SDK version through the cloud proxy", async () => {
@@ -113,7 +107,7 @@ describe("AutomationService.getSdkVersion", () => {
   });
 
   it("returns null when the SDK version endpoint is unavailable", async () => {
-    localAxios.get.mockRejectedValueOnce(new Error("not running"));
+    localOfetch.mockRejectedValueOnce(new Error("not running"));
 
     await expect(AutomationService.getSdkVersion()).resolves.toBeNull();
   });
@@ -123,12 +117,6 @@ describe("AutomationService.createAutomation", () => {
   beforeEach(() => {
     setRegisteredBackends([localBackend]);
     setActiveSelection({ backendId: localBackend.id });
-    localAxios.post.mockResolvedValue({ data: createdAutomation });
-    localAxios.patch.mockImplementation(
-      async (_path: string, body: Partial<Automation>) => ({
-        data: { ...createdAutomation, ...body },
-      }),
-    );
   });
 
   afterEach(() => {
@@ -138,61 +126,74 @@ describe("AutomationService.createAutomation", () => {
   });
 
   it("creates plugin automations through the preset API and disables them", async () => {
+    localOfetch
+      .mockResolvedValueOnce(createdAutomation)
+      .mockResolvedValueOnce({ ...createdAutomation, enabled: false });
+
     const created = await AutomationService.createAutomation(spec);
 
-    expect(localAxios.post).toHaveBeenCalledWith(
+    expect(localOfetch).toHaveBeenNthCalledWith(
+      1,
       "/api/automation/v1/preset/plugin",
-      {
-        name: spec.name,
-        prompt: spec.prompt,
-        model: spec.model,
-        trigger: {
-          type: "event",
-          source: "agent-canvas-import",
-          on: expect.stringMatching(/^pending\./),
-        },
-        repos: [
-          {
-            url: spec.repository,
-            ref: spec.branch,
-            provider: "github",
+      expect.objectContaining({
+        method: "POST",
+        baseURL: localBackend.host,
+        body: expect.objectContaining({
+          name: spec.name,
+          prompt: spec.prompt,
+          model: spec.model,
+          trigger: {
+            type: "event",
+            source: "agent-canvas-import",
+            on: expect.stringMatching(/^pending\./),
           },
-        ],
-        plugins: [{ source: spec.plugins![0] }],
-      },
-      {
-        baseURL: localBackend.host,
-        headers: { "X-Session-API-Key": localBackend.apiKey },
-      },
+          repos: [
+            {
+              url: spec.repository,
+              ref: spec.branch,
+              provider: "github",
+            },
+          ],
+          plugins: [{ source: spec.plugins![0] }],
+        }),
+      }),
     );
-    expect(localAxios.patch).toHaveBeenCalledWith(
+    expect(localOfetch).toHaveBeenNthCalledWith(
+      2,
       "/api/automation/v1/created-automation",
-      {
-        trigger: {
-          type: "cron",
-          schedule: spec.trigger.schedule,
-          timezone: spec.timezone,
-        },
-        enabled: false,
-      },
-      {
+      expect.objectContaining({
+        method: "PATCH",
         baseURL: localBackend.host,
-        headers: { "X-Session-API-Key": localBackend.apiKey },
-      },
+        body: expect.objectContaining({
+          trigger: {
+            type: "cron",
+            schedule: spec.trigger.schedule,
+            timezone: spec.timezone,
+          },
+          enabled: false,
+        }),
+      }),
     );
     expect(created.enabled).toBe(false);
   });
 
   it("uses the prompt preset path when no plugins are configured", async () => {
+    localOfetch
+      .mockResolvedValueOnce(createdAutomation)
+      .mockResolvedValueOnce({ ...createdAutomation, enabled: false });
+
     await AutomationService.createAutomation({
       ...spec,
       plugins: undefined,
     });
 
-    expect(localAxios.post).toHaveBeenCalledWith(
+    expect(localOfetch).toHaveBeenNthCalledWith(
+      1,
       "/api/automation/v1/preset/prompt",
-      expect.not.objectContaining({ plugins: expect.anything() }),
-      expect.any(Object),
+      expect.objectContaining({
+        method: "POST",
+        body: expect.not.objectContaining({ plugins: expect.anything() }),
+      }),
     );
   });
 
@@ -204,15 +205,22 @@ describe("AutomationService.createAutomation", () => {
       filter: "repository.full_name == 'openhands/agent-canvas'",
     };
 
+    localOfetch
+      .mockResolvedValueOnce(createdAutomation)
+      .mockResolvedValueOnce({ ...createdAutomation, enabled: false });
+
     await AutomationService.createAutomation({
       ...spec,
       trigger: eventTrigger,
     });
 
-    expect(localAxios.patch).toHaveBeenCalledWith(
+    expect(localOfetch).toHaveBeenNthCalledWith(
+      2,
       "/api/automation/v1/created-automation",
-      { trigger: eventTrigger, enabled: false },
-      expect.any(Object),
+      expect.objectContaining({
+        method: "PATCH",
+        body: { trigger: eventTrigger, enabled: false },
+      }),
     );
   });
 
@@ -250,28 +258,39 @@ describe("AutomationService.createAutomation", () => {
 
   it("removes the inert automation when disabling it fails", async () => {
     const updateError = new Error("update failed");
-    localAxios.patch.mockRejectedValueOnce(updateError);
+    localOfetch
+      .mockResolvedValueOnce(createdAutomation)
+      .mockRejectedValueOnce(updateError)
+      .mockResolvedValueOnce(undefined);
 
     await expect(AutomationService.createAutomation(spec)).rejects.toBe(
       updateError,
     );
 
-    expect(localAxios.delete).toHaveBeenCalledWith(
+    expect(localOfetch).toHaveBeenNthCalledWith(
+      3,
       "/api/automation/v1/created-automation",
-      {
+      expect.objectContaining({
+        method: "DELETE",
         baseURL: localBackend.host,
-        headers: { "X-Session-API-Key": localBackend.apiKey },
-      },
+      }),
     );
   });
 
   it("includes the timeout in the create request when the spec sets one", async () => {
+    localOfetch
+      .mockResolvedValueOnce(createdAutomation)
+      .mockResolvedValueOnce({ ...createdAutomation, enabled: false });
+
     await AutomationService.createAutomation({ ...spec, timeout: 1200 });
 
-    expect(localAxios.post).toHaveBeenCalledWith(
+    expect(localOfetch).toHaveBeenNthCalledWith(
+      1,
       "/api/automation/v1/preset/plugin",
-      expect.objectContaining({ timeout: 1200 }),
-      expect.any(Object),
+      expect.objectContaining({
+        method: "POST",
+        body: expect.objectContaining({ timeout: 1200 }),
+      }),
     );
   });
 });

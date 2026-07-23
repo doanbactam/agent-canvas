@@ -7,49 +7,53 @@ import type {
   AutomationRunsResponse,
 } from "#/types/automation";
 import type { Backend } from "#/api/backend-registry/types";
-import type { InternalAxiosRequestConfig } from "axios";
 
 // Use vi.hoisted to define mocks that will be available during vi.mock hoisting
 const {
-  mockGet,
-  mockPatch,
-  mockPost,
-  mockDelete,
-  mockCallCloudProxy,
+  mockOfetch,
+  localOfetch,
   mockGetActive,
   mockGetEffectiveLocal,
-  capturedInterceptors,
+  mockCallCloudProxy,
+  clearMocks,
 } = vi.hoisted(() => {
-  const interceptors: Array<(config: InternalAxiosRequestConfig) => InternalAxiosRequestConfig> = [];
+  let onRequest:
+    | ((ctx: { options: Record<string, unknown> }) => void | Promise<void>)
+    | undefined;
+  const local = vi.fn();
+  const ofetch = vi.fn(
+    async (url: string, options?: Record<string, unknown>) => {
+      const opts = options ?? {};
+      if (typeof onRequest === "function") {
+        const ctx = { options: opts };
+        await onRequest(ctx);
+        options = ctx.options;
+      }
+      return local(url, options);
+    },
+  ) as typeof local & {
+    create: (...args: any[]) => typeof ofetch;
+  };
+  ofetch.create = vi.fn((defaults: { onRequest?: typeof onRequest }) => {
+    onRequest = defaults?.onRequest;
+    return ofetch;
+  }) as any;
+
   return {
-    mockGet: vi.fn(),
-    mockPatch: vi.fn(),
-    mockPost: vi.fn(),
-    mockDelete: vi.fn(),
-    mockCallCloudProxy: vi.fn(),
+    mockOfetch: ofetch,
+    localOfetch: local,
     mockGetActive: vi.fn(),
     mockGetEffectiveLocal: vi.fn(),
-    capturedInterceptors: interceptors,
+    mockCallCloudProxy: vi.fn(),
+    clearMocks: () => {
+      local.mockClear();
+      ofetch.mockClear();
+    },
   };
 });
 
-vi.mock("axios", () => ({
-  default: {
-    create: () => ({
-      get: mockGet,
-      post: mockPost,
-
-      patch: mockPatch,
-      delete: mockDelete,
-      interceptors: {
-        request: {
-          use: (fn: (config: InternalAxiosRequestConfig) => InternalAxiosRequestConfig) => {
-            capturedInterceptors.push(fn);
-          },
-        },
-      },
-    }),
-  },
+vi.mock("ofetch", () => ({
+  ofetch: mockOfetch,
 }));
 
 vi.mock("#/api/cloud/proxy", () => ({
@@ -80,20 +84,6 @@ const cloudBackend: Backend = {
   kind: "cloud",
 };
 
-/** Build a minimal InternalAxiosRequestConfig for interceptor tests. */
-function makeAxiosConfig(
-  overrides: Partial<InternalAxiosRequestConfig> = {},
-): InternalAxiosRequestConfig {
-  const headers = {
-    set: vi.fn(),
-    get: vi.fn(),
-  } as unknown as InternalAxiosRequestConfig["headers"];
-  return {
-    headers,
-    ...overrides,
-  } as unknown as InternalAxiosRequestConfig;
-}
-
 const mockAutomation: Automation = {
   id: "1",
   name: "Test Automation",
@@ -118,21 +108,13 @@ const mockRun: AutomationRun = {
 
 describe("AutomationService", () => {
   beforeEach(() => {
-    // restoreAllMocks (vs clearAllMocks) re-attaches the original
-    // implementations of any class methods spied via vi.spyOn in earlier
-    // tests, so the cloud-routing assertions actually exercise the real
-    // method bodies instead of stale spies.
     vi.restoreAllMocks();
-    mockGet.mockReset();
-    mockPatch.mockReset();
-    mockPost.mockReset();
-    mockDelete.mockReset();
-    mockCallCloudProxy.mockReset();
-    // Default: active backend is local. Cloud-routing tests override this.
+    clearMocks();
     mockGetActive.mockReset();
     mockGetActive.mockReturnValue({ backend: localBackend, orgId: null });
     mockGetEffectiveLocal.mockReset();
     mockGetEffectiveLocal.mockReturnValue(localBackend);
+    mockCallCloudProxy.mockReset();
   });
 
   describe("listAutomations", () => {
@@ -141,16 +123,20 @@ describe("AutomationService", () => {
         automations: [mockAutomation],
         total: 1,
       };
-      mockGet.mockResolvedValue({ data: response });
+      localOfetch.mockResolvedValueOnce(response);
 
       const result = await AutomationService.listAutomations({
         limit: 10,
         offset: 5,
       });
 
-      expect(mockGet).toHaveBeenCalledWith("/api/automation/v1", {
-        params: { limit: 10, offset: 5 },
-      });
+      expect(localOfetch).toHaveBeenCalledWith(
+        "/api/automation/v1",
+        expect.objectContaining({
+          method: "GET",
+          query: { limit: 10, offset: 5 },
+        }),
+      );
       expect(result).toEqual(response);
     });
 
@@ -159,13 +145,32 @@ describe("AutomationService", () => {
         automations: [],
         total: 0,
       };
-      mockGet.mockResolvedValue({ data: response });
+      localOfetch.mockResolvedValueOnce(response);
 
       await AutomationService.listAutomations();
 
-      expect(mockGet).toHaveBeenCalledWith("/api/automation/v1", {
-        params: { limit: 50, offset: 0 },
-      });
+      expect(localOfetch).toHaveBeenCalledWith(
+        "/api/automation/v1",
+        expect.objectContaining({
+          method: "GET",
+          query: { limit: 50, offset: 0 },
+        }),
+      );
+    });
+
+    it("resolves baseURL and X-Session-API-Key from the effective local backend", async () => {
+      localOfetch.mockResolvedValueOnce({ automations: [], total: 0 });
+
+      await AutomationService.listAutomations();
+
+      expect(localOfetch).toHaveBeenCalledWith(
+        "/api/automation/v1",
+        expect.objectContaining({
+          method: "GET",
+          baseURL: localBackend.host,
+          headers: expect.any(Object),
+        }),
+      );
     });
   });
 
@@ -175,9 +180,7 @@ describe("AutomationService", () => {
         automations: [mockAutomation],
         total: 1,
       };
-      vi.spyOn(AutomationService, "listAutomations").mockResolvedValue(
-        response,
-      );
+      vi.spyOn(AutomationService, "listAutomations").mockResolvedValue(response);
 
       const result = await AutomationService.getAutomations(10, 5);
 
@@ -191,13 +194,14 @@ describe("AutomationService", () => {
 
   describe("getAutomation", () => {
     it("fetches a single automation by id", async () => {
-      mockGet.mockResolvedValue({
-        data: mockAutomation,
-      });
+      localOfetch.mockResolvedValueOnce(mockAutomation);
 
       const result = await AutomationService.getAutomation("1");
 
-      expect(mockGet).toHaveBeenCalledWith("/api/automation/v1/1");
+      expect(localOfetch).toHaveBeenCalledWith(
+        "/api/automation/v1/1",
+        expect.objectContaining({ method: "GET" }),
+      );
       expect(result).toEqual(mockAutomation);
     });
   });
@@ -205,79 +209,101 @@ describe("AutomationService", () => {
   describe("updateAutomation", () => {
     it("patches an automation with the provided body", async () => {
       const updated = { ...mockAutomation, name: "Updated Name" };
-      mockPatch.mockResolvedValue({ data: updated });
+      localOfetch.mockResolvedValueOnce(updated);
 
       const result = await AutomationService.updateAutomation("1", {
         name: "Updated Name",
       });
 
-      expect(mockPatch).toHaveBeenCalledWith("/api/automation/v1/1", {
-        name: "Updated Name",
-      });
+      expect(localOfetch).toHaveBeenCalledWith(
+        "/api/automation/v1/1",
+        expect.objectContaining({
+          method: "PATCH",
+          body: { name: "Updated Name" },
+        }),
+      );
       expect(result).toEqual(updated);
     });
 
     it("sends model profile updates to the automation API", async () => {
       const updated = { ...mockAutomation, model: "careful-profile" };
-      mockPatch.mockResolvedValue({ data: updated });
+      localOfetch.mockResolvedValueOnce(updated);
 
       const result = await AutomationService.updateAutomation("1", {
         model: "careful-profile",
       });
 
-      expect(mockPatch).toHaveBeenCalledWith("/api/automation/v1/1", {
-        model: "careful-profile",
-      });
+      expect(localOfetch).toHaveBeenCalledWith(
+        "/api/automation/v1/1",
+        expect.objectContaining({
+          method: "PATCH",
+          body: { model: "careful-profile" },
+        }),
+      );
       expect(result).toEqual(updated);
     });
   });
 
   describe("dispatchAutomation", () => {
     it("posts to the dispatch endpoint", async () => {
-      mockPost.mockResolvedValue({ data: mockRun });
+      localOfetch.mockResolvedValueOnce(mockRun);
 
       const result = await AutomationService.dispatchAutomation("1");
 
-      expect(mockPost).toHaveBeenCalledWith("/api/automation/v1/1/dispatch");
+      expect(localOfetch).toHaveBeenCalledWith(
+        "/api/automation/v1/1/dispatch",
+        expect.objectContaining({ method: "POST" }),
+      );
       expect(result).toEqual(mockRun);
     });
   });
 
   describe("deleteAutomation", () => {
     it("deletes an automation by id", async () => {
-      mockDelete.mockResolvedValue({});
+      localOfetch.mockResolvedValueOnce(undefined);
 
       await AutomationService.deleteAutomation("1");
 
-      expect(mockDelete).toHaveBeenCalledWith("/api/automation/v1/1");
+      expect(localOfetch).toHaveBeenCalledWith(
+        "/api/automation/v1/1",
+        expect.objectContaining({ method: "DELETE" }),
+      );
     });
   });
 
   describe("listAutomationRuns", () => {
     it("fetches runs with params object", async () => {
       const response: AutomationRunsResponse = { runs: [], total: 0 };
-      mockGet.mockResolvedValue({ data: response });
+      localOfetch.mockResolvedValueOnce(response);
 
       const result = await AutomationService.listAutomationRuns("1", {
         limit: 20,
         offset: 10,
       });
 
-      expect(mockGet).toHaveBeenCalledWith("/api/automation/v1/1/runs", {
-        params: { limit: 20, offset: 10 },
-      });
+      expect(localOfetch).toHaveBeenCalledWith(
+        "/api/automation/v1/1/runs",
+        expect.objectContaining({
+          method: "GET",
+          query: { limit: 20, offset: 10 },
+        }),
+      );
       expect(result).toEqual(response);
     });
 
     it("uses default params when none provided", async () => {
       const response: AutomationRunsResponse = { runs: [], total: 0 };
-      mockGet.mockResolvedValue({ data: response });
+      localOfetch.mockResolvedValueOnce(response);
 
       await AutomationService.listAutomationRuns("1");
 
-      expect(mockGet).toHaveBeenCalledWith("/api/automation/v1/1/runs", {
-        params: { limit: 50, offset: 0 },
-      });
+      expect(localOfetch).toHaveBeenCalledWith(
+        "/api/automation/v1/1/runs",
+        expect.objectContaining({
+          method: "GET",
+          query: { limit: 50, offset: 0 },
+        }),
+      );
     });
   });
 
@@ -314,30 +340,6 @@ describe("AutomationService", () => {
     });
   });
 
-  describe("dispatchAutomation", () => {
-    it("posts to the dispatch endpoint for local backends", async () => {
-      const run = {
-        id: "run-1",
-        status: "PENDING",
-        conversation_id: null,
-        bash_command_id: null,
-        error_detail: null,
-        started_at: "2026-01-01T00:00:00Z",
-        completed_at: null,
-      };
-      mockPost.mockResolvedValue({ data: run });
-
-      const result = await AutomationService.dispatchAutomation("1");
-
-      expect(mockPost).toHaveBeenCalledWith("/api/automation/v1/1/dispatch");
-      expect(result).toEqual(run);
-    });
-  });
-
-  // When the active backend is cloud the local axios instance must be
-  // bypassed entirely; calls must route through `callCloudProxy`, which
-  // sends them directly to the cloud host from the browser (the automation
-  // service grants permissive CORS to API-key requests, automation#185).
   describe("cloud routing", () => {
     beforeEach(() => {
       mockGetActive.mockReturnValue({ backend: cloudBackend, orgId: null });
@@ -358,8 +360,9 @@ describe("AutomationService", () => {
       expect(mockCallCloudProxy).toHaveBeenCalledWith({
         backend: cloudBackend,
         method: "GET",
-        path: "/api/automation/v1?limit=10&offset=5",      });
-      expect(mockGet).not.toHaveBeenCalled();
+        path: "/api/automation/v1?limit=10&offset=5",
+      });
+      expect(localOfetch).not.toHaveBeenCalled();
       expect(result).toEqual(response);
     });
 
@@ -371,7 +374,8 @@ describe("AutomationService", () => {
       expect(mockCallCloudProxy).toHaveBeenCalledWith({
         backend: cloudBackend,
         method: "GET",
-        path: "/api/automation/v1/abc",      });
+        path: "/api/automation/v1/abc",
+      });
       expect(result).toEqual(mockAutomation);
     });
 
@@ -383,8 +387,9 @@ describe("AutomationService", () => {
       expect(mockCallCloudProxy).toHaveBeenCalledWith({
         backend: cloudBackend,
         method: "POST",
-        path: "/api/automation/v1/abc/dispatch",      });
-      expect(mockPost).not.toHaveBeenCalled();
+        path: "/api/automation/v1/abc/dispatch",
+      });
+      expect(localOfetch).not.toHaveBeenCalled();
       expect(result).toEqual(mockRun);
     });
 
@@ -400,8 +405,9 @@ describe("AutomationService", () => {
         backend: cloudBackend,
         method: "PATCH",
         path: "/api/automation/v1/abc",
-        body: { enabled: false },      });
-      expect(mockPatch).not.toHaveBeenCalled();
+        body: { enabled: false },
+      });
+      expect(localOfetch).not.toHaveBeenCalled();
       expect(result).toEqual(updated);
     });
 
@@ -413,30 +419,9 @@ describe("AutomationService", () => {
       expect(mockCallCloudProxy).toHaveBeenCalledWith({
         backend: cloudBackend,
         method: "DELETE",
-        path: "/api/automation/v1/abc",      });
-      expect(mockDelete).not.toHaveBeenCalled();
-    });
-
-    it("dispatchAutomation forwards method POST via callCloudProxy", async () => {
-      const run = {
-        id: "run-1",
-        status: "PENDING",
-        conversation_id: null,
-        bash_command_id: null,
-        error_detail: null,
-        started_at: "2026-01-01T00:00:00Z",
-        completed_at: null,
-      };
-      mockCallCloudProxy.mockResolvedValue(run);
-
-      const result = await AutomationService.dispatchAutomation("abc");
-
-      expect(mockCallCloudProxy).toHaveBeenCalledWith({
-        backend: cloudBackend,
-        method: "POST",
-        path: "/api/automation/v1/abc/dispatch",      });
-      expect(mockPost).not.toHaveBeenCalled();
-      expect(result).toEqual(run);
+        path: "/api/automation/v1/abc",
+      });
+      expect(localOfetch).not.toHaveBeenCalled();
     });
 
     it("checkHealth calls the cloud host with a fail-fast timeout and returns the upstream status", async () => {
@@ -444,13 +429,11 @@ describe("AutomationService", () => {
 
       const result = await AutomationService.checkHealth();
 
-      // Property access (vs whole-object matching) keeps these assertions
-      // resilient to future additive CloudProxyRequest fields.
       const call = mockCallCloudProxy.mock.calls[0]![0];
       expect(call.method).toBe("GET");
       expect(call.path).toBe("/api/automation/health");
       expect(call.timeoutSeconds).toBe(5);
-      expect(mockGet).not.toHaveBeenCalled();
+      expect(localOfetch).not.toHaveBeenCalled();
       expect(result).toEqual({ status: "ok" });
     });
 
@@ -463,74 +446,81 @@ describe("AutomationService", () => {
     });
   });
 
-  // The interceptor must read the session API key from the active backend
-  // registry rather than the build-time VITE_SESSION_API_KEY env var so that
-  // the published npm package picks up the runtime-injected key (issue #829).
-  describe("localAutomationAxios interceptor", () => {
-    it("sets X-Session-API-Key from the effective local backend apiKey", () => {
-      const interceptor = capturedInterceptors[0];
-      expect(interceptor).toBeDefined();
-
-      const backendWithKey: Backend = {
+  describe("local backend request setup", () => {
+    it("sets X-Session-API-Key from the effective local backend apiKey", async () => {
+      mockGetEffectiveLocal.mockReturnValue({
         ...localBackend,
         apiKey: "runtime-injected-key",
-      };
-      mockGetEffectiveLocal.mockReturnValue(backendWithKey);
+      });
+      localOfetch.mockResolvedValueOnce({ automations: [], total: 0 });
 
-      const config = makeAxiosConfig();
-      interceptor(config);
+      await AutomationService.listAutomations();
 
-      expect(config.headers.set).toHaveBeenCalledWith(
-        "X-Session-API-Key",
-        "runtime-injected-key",
-      );
+      const [, options] = localOfetch.mock.calls[0];
+      expect(options).toMatchObject({
+        baseURL: localBackend.host,
+        headers: expect.any(Object),
+      });
+      const headers = options?.headers as Headers;
+      expect(headers.get("X-Session-API-Key")).toBe("runtime-injected-key");
     });
 
-    it("does not set X-Session-API-Key when backend apiKey is empty", () => {
-      const interceptor = capturedInterceptors[0];
-      expect(interceptor).toBeDefined();
-
+    it("does not set X-Session-API-Key when backend apiKey is empty", async () => {
       mockGetEffectiveLocal.mockReturnValue({
         ...localBackend,
         apiKey: "",
       });
+      localOfetch.mockResolvedValueOnce({ automations: [], total: 0 });
 
-      const config = makeAxiosConfig();
-      interceptor(config);
+      await AutomationService.listAutomations();
 
-      expect(config.headers.set).not.toHaveBeenCalled();
+      const [, options] = localOfetch.mock.calls[0];
+      expect(options?.headers).toBeUndefined();
     });
 
-    it("sets baseURL from effective local backend host when not already set", () => {
-      const interceptor = capturedInterceptors[0];
-      expect(interceptor).toBeDefined();
-
+    it("sets baseURL from effective local backend host when not already set", async () => {
       mockGetEffectiveLocal.mockReturnValue({
         ...localBackend,
         host: "http://custom-host:9000",
         apiKey: "key",
       });
+      localOfetch.mockResolvedValueOnce({ automations: [], total: 0 });
 
-      const config = makeAxiosConfig();
-      interceptor(config);
+      await AutomationService.listAutomations();
 
-      expect(config.baseURL).toBe("http://custom-host:9000");
+      const [, options] = localOfetch.mock.calls[0];
+      expect(options?.baseURL).toBe("http://custom-host:9000");
     });
 
-    it("does not overwrite an already-set baseURL", () => {
-      const interceptor = capturedInterceptors[0];
-      expect(interceptor).toBeDefined();
-
+    it("does not overwrite an already-set baseURL", async () => {
+      // createAutomation pins the request to the backend active when the
+      // mutation started via buildPinnedLocalConfig. The interceptor must not
+      // overwrite that baseURL with getEffectiveLocalBackend's current value.
       mockGetEffectiveLocal.mockReturnValue({
         ...localBackend,
         host: "http://should-not-use:9000",
         apiKey: "key",
       });
+      localOfetch
+        .mockResolvedValueOnce(mockAutomation)
+        .mockResolvedValueOnce({ ...mockAutomation, enabled: false });
 
-      const config = makeAxiosConfig({ baseURL: "http://already-set:8000" });
-      interceptor(config);
+      const spec = {
+        name: "Imported",
+        prompt: "Do it",
+        trigger: { type: "schedule", schedule_human: "Daily" } as const,
+        enabled: true,
+        repository: "acme/repo",
+        model: "daily-profile",
+      };
 
-      expect(config.baseURL).toBe("http://already-set:8000");
+      await AutomationService.createAutomation(spec);
+
+      const [, options] = localOfetch.mock.calls[0];
+      expect(options?.baseURL).toBe("http://localhost:8000");
+      expect(options?.headers).toMatchObject({
+        "X-Session-API-Key": "session-key",
+      });
     });
   });
 });

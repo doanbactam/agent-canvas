@@ -1,5 +1,5 @@
 import React from "react";
-import { AxiosError } from "axios";
+import { isAxiosError, type AxiosError } from "#/utils/axios-error";
 import { useTranslation } from "react-i18next";
 import { BrandButton } from "#/components/features/settings/brand-button";
 import { LlmSettingsInputsSkeleton } from "#/components/features/settings/llm-settings/llm-settings-inputs-skeleton";
@@ -92,7 +92,7 @@ const getSchemaUnavailableMessage = (
   error: unknown,
   fallbackMessage: string,
 ): string => {
-  if (!(error instanceof AxiosError)) {
+  if (!isAxiosError(error)) {
     return fallbackMessage;
   }
 
