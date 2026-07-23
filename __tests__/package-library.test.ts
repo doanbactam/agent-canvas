@@ -117,6 +117,9 @@ describe("package library metadata", () => {
 
   it("uses local dev commands without Docker", () => {
     expect(packageJson.scripts.dev).toBe(
+      "node --env-file-if-exists=.env scripts/dev-safe.mjs",
+    );
+    expect(packageJson.scripts["dev:automation"]).toBe(
       "node --env-file-if-exists=.env scripts/dev-with-automation.mjs",
     );
     expect(packageJson.scripts["dev:static"]).toBe(

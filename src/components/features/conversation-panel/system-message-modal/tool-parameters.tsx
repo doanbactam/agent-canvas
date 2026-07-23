@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next";
-import ReactJsonView from "@microlink/react-json-view";
-import { JSON_VIEW_THEME } from "#/utils/constants";
+import { cn } from "#/utils/utils";
 import { Typography } from "#/ui/typography";
 import { I18nKey } from "#/i18n/declaration";
 
@@ -17,7 +16,14 @@ export function ToolParameters({ parameters }: ToolParametersProps) {
         {t(I18nKey.SYSTEM_MESSAGE_MODAL$PARAMETERS)}
       </Typography.Text>
       <div className="text-sm mt-2 p-3 bg-base rounded-md overflow-auto text-[var(--oh-text-tertiary)] max-h-[400px] border border-[var(--oh-border)]">
-        <ReactJsonView name={false} src={parameters} theme={JSON_VIEW_THEME} />
+        <pre
+          className={cn(
+            "font-mono text-xs whitespace-pre-wrap break-all",
+            "text-[var(--oh-text-tertiary)]",
+          )}
+        >
+          {JSON.stringify(parameters, null, 2)}
+        </pre>
       </div>
     </div>
   );

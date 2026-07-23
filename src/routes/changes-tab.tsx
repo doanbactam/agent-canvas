@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next";
 import React from "react";
-import { FileDiffViewer } from "#/components/features/diff-viewer/file-diff-viewer";
 import { EmptyChangesMessage } from "#/components/features/diff-viewer/empty-changes-message";
 import { DiffDrawerIcon } from "#/components/features/diff-viewer/diff-drawer-icon";
 import { retrieveAxiosErrorMessage } from "#/utils/retrieve-axios-error-message";
@@ -11,6 +10,15 @@ import { RandomTip } from "#/components/features/tips/random-tip";
 import { useAgentState } from "#/hooks/use-agent-state";
 import { RuntimeWaitingState } from "#/components/features/conversation-panel/runtime-waiting-state";
 import { ConversationTabEmptyState } from "#/components/features/conversation/conversation-tab-empty-state";
+import { LoadingSpinner } from "#/components/features/diff-viewer/loading-spinner";
+
+// Lazy load the Monaco-backed diff viewer so the large editor chunk is only
+// fetched when the user actually opens the changes tab with diffs to show.
+const LazyFileDiffViewer = React.lazy(() =>
+  import("#/components/features/diff-viewer/file-diff-viewer").then((m) => ({
+    default: m.FileDiffViewer,
+  })),
+);
 
 // Error message patterns
 const GIT_REPO_ERROR_PATTERN = /not a git repository/i;
@@ -104,15 +112,23 @@ function GitChanges() {
           {!isError && isSuccess && gitChanges.length === 0 && <RandomTip />}
         </div>
       ) : (
-        <div className="h-full overflow-y-auto flex flex-col items-stretch custom-scrollbar-always">
-          {gitChanges.slice(0, 100).map((change) => (
-            <FileDiffViewer
-              key={change.path}
-              path={change.path}
-              type={change.status}
-            />
-          ))}
-        </div>
+        <React.Suspense
+          fallback={
+            <div className="flex-1 flex items-center justify-center p-4">
+              <LoadingSpinner className="w-6 h-6" />
+            </div>
+          }
+        >
+          <div className="h-full overflow-y-auto flex flex-col items-stretch custom-scrollbar-always">
+            {gitChanges.slice(0, 100).map((change) => (
+              <LazyFileDiffViewer
+                key={change.path}
+                path={change.path}
+                type={change.status}
+              />
+            ))}
+          </div>
+        </React.Suspense>
       )}
     </main>
   );

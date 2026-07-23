@@ -117,6 +117,8 @@ npm install
 npm run dev
 ```
 
+To also run the optional automation backend, use `npm run dev:automation`.
+
 ---
 
 Access the UI at [http://localhost:8000](http://localhost:8000) for the npm/source launchers, or [http://localhost:8000/canvas](http://localhost:8000/canvas) for the Docker image. You can add additional backends directly from the UI.
