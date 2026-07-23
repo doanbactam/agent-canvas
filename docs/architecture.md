@@ -48,8 +48,7 @@ Agent Canvas supports several modes:
 
 | Mode | Purpose |
 |---|---|
-| `npm run dev:docker` | Starts the UI with an Agent Server in a Docker sandbox. This is the default safer local workflow. |
-| `npm run dev:dangerously-dockerless` | Starts the UI and Agent Server directly on the host. This is useful for servers and trusted environments, but the agent has host filesystem access. |
+| `npm run dev` | Starts the UI with an Agent Server directly on the host. This is the default, lighter local workflow. |
 | `npm run dev:automation` | Starts the local stack with an automation backend. |
 | `npm run dev:mock` | Runs the frontend against MSW mocks for UI development and tests. |
 | `npm run build` | Builds the standalone application. |

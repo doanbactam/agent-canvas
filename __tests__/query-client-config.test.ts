@@ -1,4 +1,3 @@
-import { AxiosError } from "axios";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createAgentServerQueryClient } from "#/query-client-config";
 import { __resetActiveStoreForTests } from "#/api/backend-registry/active-store";
@@ -20,7 +19,7 @@ describe("createAgentServerQueryClient", () => {
       client.fetchQuery({
         queryKey: ["config", "suppressed"],
         queryFn: async () => {
-          throw new AxiosError("suppressed query error");
+          throw new Error("suppressed query error");
         },
         meta: { disableToast: true },
         retry: false,
@@ -38,7 +37,7 @@ describe("createAgentServerQueryClient", () => {
       client.fetchQuery({
         queryKey: ["config", "toast"],
         queryFn: async () => {
-          throw new AxiosError("query error with toast");
+          throw new Error("query error with toast");
         },
         retry: false,
       }),
@@ -71,17 +70,14 @@ describe("createAgentServerQueryClient", () => {
     __resetActiveStoreForTests();
     const client = createAgentServerQueryClient();
 
+    const error = new Error("Request failed with status code 401");
+    (error as { response?: { status: number } }).response = { status: 401 };
+
     await expect(
       client.fetchQuery({
         queryKey: ["cloud", "logged-out"],
         queryFn: async () => {
-          throw new AxiosError(
-            "Request failed with status code 401",
-            "ERR_BAD_REQUEST",
-            undefined,
-            undefined,
-            { status: 401 } as never,
-          );
+          throw error;
         },
         retry: false,
       }),

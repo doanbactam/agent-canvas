@@ -1,4 +1,4 @@
-import axios from "axios";
+import { ofetch } from "ofetch";
 import type {
   Automation,
   AutomationRun,
@@ -29,36 +29,89 @@ type AutomationSdkVersionResponse =
       version?: unknown;
     };
 
+interface LocalHttpConfig {
+  params?: Record<string, unknown>;
+  timeout?: number;
+  responseType?: "blob" | "json";
+  baseURL?: string;
+  headers?: Record<string, string>;
+}
+
+type LocalFetch = <T = unknown>(
+  url: string,
+  options?: Record<string, unknown>,
+) => Promise<T>;
+
 // Local automation calls go to the automation sidecar that
 // `scripts/dev-with-automation.mjs` mounts behind the local agent-server.
 // Both backends use the same session API key and the same `X-Session-API-Key`
 // header for consistency.
-const localAutomationAxios = axios.create();
+const localAutomationOfetch = ofetch.create({
+  onRequest({ options }) {
+    // Import uses an explicit baseURL/header pair so its POST, PATCH, and
+    // cleanup stay pinned to the backend selected when the mutation started.
+    if (options.baseURL) return;
 
-localAutomationAxios.interceptors.request.use((config) => {
-  // Import uses an explicit baseURL/header pair so its POST, PATCH, and
-  // cleanup stay pinned to the backend selected when the mutation started.
-  if (config.baseURL) return config;
+    // Resolve the local backend on every call so it tracks the
+    // currently-active local backend (and any host/key edits made via the
+    // manage-backends UI), rather than freezing whatever value the
+    // agent-server-config produced at module load time.
+    // Using the backend registry (rather than the build-time VITE_SESSION_API_KEY
+    // env var) ensures the published npm package picks up the runtime-injected
+    // session key that scripts/static-server.mjs seeds into localStorage, fixing
+    // the 401 errors reported in issue #829.
+    /* eslint-disable no-param-reassign */
+    const backend = getEffectiveLocalBackend();
+    if (!backend) throw new NoBackendAvailableError();
+    options.baseURL = backend.host;
 
-  // Resolve the local backend on every call so it tracks the
-  // currently-active local backend (and any host/key edits made via the
-  // manage-backends UI), rather than freezing whatever value the
-  // agent-server-config produced at module load time.
-  // Using the backend registry (rather than the build-time VITE_SESSION_API_KEY
-  // env var) ensures the published npm package picks up the runtime-injected
-  // session key that scripts/static-server.mjs seeds into localStorage, fixing
-  // the 401 errors reported in issue #829.
-  const backend = getEffectiveLocalBackend();
-  if (!backend) throw new NoBackendAvailableError();
-  // eslint-disable-next-line no-param-reassign
-  config.baseURL = backend.host;
+    const apiKey = backend.apiKey?.trim();
+    if (apiKey) {
+      options.headers = new Headers(options.headers);
+      options.headers.set("X-Session-API-Key", apiKey);
+    }
+    /* eslint-enable no-param-reassign */
+  },
+}) as LocalFetch;
 
-  const apiKey = backend.apiKey?.trim();
-  if (apiKey) {
-    config.headers.set("X-Session-API-Key", apiKey);
-  }
-  return config;
-});
+const localAutomationHttp = {
+  async get<T>(url: string, config?: LocalHttpConfig) {
+    const data = await localAutomationOfetch<T>(url, {
+      method: "GET",
+      query: config?.params,
+      timeout: config?.timeout,
+      responseType: config?.responseType,
+      baseURL: config?.baseURL,
+      headers: config?.headers,
+    });
+    return { data };
+  },
+  async post<T>(url: string, body?: unknown, config?: LocalHttpConfig) {
+    const data = await localAutomationOfetch<T>(url, {
+      method: "POST",
+      body,
+      baseURL: config?.baseURL,
+      headers: config?.headers,
+    });
+    return { data };
+  },
+  async patch<T>(url: string, body?: unknown, config?: LocalHttpConfig) {
+    const data = await localAutomationOfetch<T>(url, {
+      method: "PATCH",
+      body,
+      baseURL: config?.baseURL,
+      headers: config?.headers,
+    });
+    return { data };
+  },
+  async delete<T>(url: string, config?: LocalHttpConfig) {
+    await localAutomationOfetch<T>(url, {
+      method: "DELETE",
+      baseURL: config?.baseURL,
+      headers: config?.headers,
+    });
+  },
+};
 
 function normalizeAutomationSdkVersion(version: unknown): string | null {
   if (typeof version !== "string") return null;
@@ -180,7 +233,7 @@ class AutomationService {
         });
       } else {
         const { data } =
-          await localAutomationAxios.get<AutomationSdkVersionResponse>(path, {
+          await localAutomationHttp.get<AutomationSdkVersionResponse>(path, {
             timeout: 5000,
           });
         response = data;
@@ -206,7 +259,7 @@ class AutomationService {
       });
     }
 
-    const { data } = await localAutomationAxios.get<AutomationsResponse>(
+    const { data } = await localAutomationHttp.get<AutomationsResponse>(
       `${AUTOMATION_BASE_PATH}/v1`,
       { params: { limit, offset } },
     );
@@ -232,7 +285,7 @@ class AutomationService {
       });
     }
 
-    const { data } = await localAutomationAxios.get<Automation>(path);
+    const { data } = await localAutomationHttp.get<Automation>(path);
     return data;
   }
 
@@ -250,7 +303,7 @@ class AutomationService {
         headers: buildPinnedCloudHeaders(active),
       });
     } else {
-      const { data } = await localAutomationAxios.post<Automation>(
+      const { data } = await localAutomationHttp.post<Automation>(
         path,
         body,
         buildPinnedLocalConfig(active.backend),
@@ -275,7 +328,7 @@ class AutomationService {
         });
       }
 
-      const { data } = await localAutomationAxios.patch<Automation>(
+      const { data } = await localAutomationHttp.patch<Automation>(
         updatePath,
         updateBody,
         buildPinnedLocalConfig(active.backend),
@@ -291,7 +344,7 @@ class AutomationService {
             headers: buildPinnedCloudHeaders(active),
           });
         } else {
-          await localAutomationAxios.delete(
+          await localAutomationHttp.delete(
             updatePath,
             buildPinnedLocalConfig(active.backend),
           );
@@ -322,7 +375,7 @@ class AutomationService {
       });
     }
 
-    const { data } = await localAutomationAxios.patch<Automation>(path, body);
+    const { data } = await localAutomationHttp.patch<Automation>(path, body);
     return data;
   }
 
@@ -339,7 +392,7 @@ class AutomationService {
       return;
     }
 
-    await localAutomationAxios.delete(path);
+    await localAutomationHttp.delete(path);
   }
 
   static async dispatchAutomation(id: string): Promise<AutomationRun> {
@@ -354,7 +407,7 @@ class AutomationService {
       });
     }
 
-    const { data } = await localAutomationAxios.post<AutomationRun>(path);
+    const { data } = await localAutomationHttp.post<AutomationRun>(path);
     return data;
   }
 
@@ -374,7 +427,7 @@ class AutomationService {
       });
     }
 
-    const { data } = await localAutomationAxios.get<AutomationRunsResponse>(
+    const { data } = await localAutomationHttp.get<AutomationRunsResponse>(
       basePath,
       { params: { limit, offset } },
     );
@@ -409,7 +462,7 @@ class AutomationService {
         responseType: "blob",
       });
     } else {
-      const { data } = await localAutomationAxios.get<Blob>(path, {
+      const { data } = await localAutomationHttp.get<Blob>(path, {
         responseType: "blob",
       });
       blob = data;
@@ -439,7 +492,7 @@ class AutomationService {
         return response;
       }
 
-      const { data } = await localAutomationAxios.get<AutomationHealthResponse>(
+      const { data } = await localAutomationHttp.get<AutomationHealthResponse>(
         path,
         { timeout: 5000 },
       );

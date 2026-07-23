@@ -1,73 +1,50 @@
-import { DiffEditor, Editor, Monaco } from "@monaco-editor/react";
 import React from "react";
-import { editor as editor_t } from "monaco-editor";
 import { useTranslation } from "react-i18next";
+import { FileDiff, File } from "@pierre/diffs/react";
+import { parseDiffFromFile, type FileDiffMetadata } from "@pierre/diffs";
 import {
-  LuFileDiff,
-  LuFileMinus,
-  LuFilePlus,
-  LuHistory,
-  LuGitCompareArrows,
-  LuFileCheck,
-} from "react-icons/lu";
-import { IconType } from "react-icons/lib";
+  FileDiff as FileDiffIcon,
+  FileMinus,
+  FilePlus,
+  History,
+  GitCompareArrows,
+  FileCheck,
+  type LucideIcon,
+} from "lucide-react";
 import { GitChangeStatus } from "#/api/open-hands.types";
 import { I18nKey } from "#/i18n/declaration";
 import { getLanguageFromPath } from "#/utils/get-language-from-path";
 import { cn } from "#/utils/utils";
-import ChevronUp from "#/icons/chveron-up.svg?react";
+import { useAgentServerUITheme } from "#/hooks/use-agent-server-ui-theme";
 import { useUnifiedGitDiff } from "#/hooks/query/use-unified-git-diff";
 import { MarkdownRenderer } from "#/components/features/markdown/markdown-renderer";
 import { Typography } from "#/ui/typography";
+import ChevronUp from "#/icons/chveron-up.svg?react";
 import { LoadingSpinner } from "./loading-spinner";
-import { EditorContainer } from "./editor-container";
+import { CodeDiffContainer } from "./code-diff-container";
 
 type ViewMode = "diff" | "old" | "new";
 
-const VIEW_MODES: { mode: ViewMode; icon: IconType }[] = [
-  { mode: "old", icon: LuHistory },
-  { mode: "diff", icon: LuGitCompareArrows },
-  { mode: "new", icon: LuFileCheck },
+const VIEW_MODES: { mode: ViewMode; icon: LucideIcon }[] = [
+  { mode: "old", icon: History },
+  { mode: "diff", icon: GitCompareArrows },
+  { mode: "new", icon: FileCheck },
 ];
 
-const SHARED_EDITOR_OPTIONS: editor_t.IEditorOptions = {
-  renderValidationDecorations: "off",
-  readOnly: true,
-  scrollBeyondLastLine: false,
-  minimap: { enabled: false },
-  automaticLayout: true,
-  scrollbar: { alwaysConsumeMouseWheel: false },
-};
-
-const STATUS_MAP: Record<GitChangeStatus, string | IconType> = {
-  A: LuFilePlus,
-  D: LuFileMinus,
-  M: LuFileDiff,
+const STATUS_MAP: Record<GitChangeStatus, string | LucideIcon> = {
+  A: FilePlus,
+  D: FileMinus,
+  M: FileDiffIcon,
   R: "Renamed",
   U: "Untracked",
 };
 
-const beforeMount = (monaco: Monaco) => {
-  monaco.editor.defineTheme("custom-diff-theme", {
-    base: "vs-dark",
-    inherit: true,
-    rules: [
-      { token: "comment", foreground: "6a9955" },
-      { token: "keyword", foreground: "569cd6" },
-      { token: "string", foreground: "ce9178" },
-      { token: "number", foreground: "b5cea8" },
-    ],
-    colors: {
-      "diffEditor.insertedTextBackground": "#014b01AA",
-      "diffEditor.removedTextBackground": "#750000AA",
-      "diffEditor.insertedLineBackground": "#003f00AA",
-      "diffEditor.removedLineBackground": "#5a0000AA",
-      "diffEditor.border": "var(--oh-border-subtle)",
-      "editorUnnecessaryCode.border": "#00000000",
-      "editorUnnecessaryCode.opacity": "rgba(0, 0, 0, 0.467)",
-    },
-  });
-};
+const DIFF_EDITOR_HEIGHT = 400;
+
+const FILE_DIFF_THEMES = {
+  dark: "pierre-dark",
+  light: "pierre-light",
+} as const;
 
 export interface FileDiffViewerProps {
   path: string;
@@ -80,24 +57,51 @@ export interface FileDiffViewerProps {
   commit?: string;
 }
 
+function splitRenamePath(path: string) {
+  const trimmed = path.trim();
+
+  const braceMatch = trimmed.match(/^(.*)\{(.*?)\s*(?:=>|->)\s*(.*?)\}(.*)$/);
+  if (braceMatch) {
+    const [, prefix, oldPart, newPart, suffix] = braceMatch;
+    return {
+      oldName: `${prefix}${oldPart}${suffix}`.trim() || path,
+      newName: `${prefix}${newPart}${suffix}`.trim() || path,
+    };
+  }
+
+  const arrowMatch = trimmed.match(/^(.*?)\s*(?:=>|->)\s*(.*)$/);
+  if (arrowMatch) {
+    return {
+      oldName: arrowMatch[1].trim() || path,
+      newName: arrowMatch[2].trim() || path,
+    };
+  }
+
+  const parts = trimmed.split(/\s+/);
+  if (parts.length >= 2) {
+    return { oldName: parts[0], newName: parts[parts.length - 1] };
+  }
+
+  return { oldName: path, newName: path };
+}
+
 export function FileDiffViewer({ path, type, commit }: FileDiffViewerProps) {
   const { t } = useTranslation("openhands");
   const [isCollapsed, setIsCollapsed] = React.useState(true);
-  const [editorHeight, setEditorHeight] = React.useState(400);
   const [viewMode, setViewMode] = React.useState<ViewMode>("diff");
-  const diffEditorRef = React.useRef<editor_t.IStandaloneDiffEditor>(null);
-  const singleEditorRef = React.useRef<editor_t.IStandaloneCodeEditor>(null);
+  const uiTheme = useAgentServerUITheme();
 
   const isAdded = type === "A" || type === "U";
   const isDeleted = type === "D";
+  const isRenamed = type === "R";
 
-  const filePath = React.useMemo(() => {
-    if (type === "R") {
-      const parts = path.split(/\s+/).slice(1);
-      return parts[parts.length - 1];
-    }
-    return path;
-  }, [path, type]);
+  const { oldName, newName } = React.useMemo(
+    () =>
+      isRenamed ? splitRenamePath(path) : { oldName: path, newName: path },
+    [path, isRenamed],
+  );
+
+  const filePath = newName;
 
   const {
     data: diff,
@@ -111,38 +115,28 @@ export function FileDiffViewer({ path, type, commit }: FileDiffViewerProps) {
     commit,
   });
 
-  const updateEditorHeight = React.useCallback(() => {
-    if (!diffEditorRef.current) return;
-    const originalEditor = diffEditorRef.current.getOriginalEditor();
-    const modifiedEditor = diffEditorRef.current.getModifiedEditor();
-    if (originalEditor && modifiedEditor) {
-      setEditorHeight(
-        Math.max(
-          originalEditor.getContentHeight(),
-          modifiedEditor.getContentHeight(),
-        ) + 20,
+  const language = getLanguageFromPath(filePath);
+  const isMarkdownFile = language === "markdown";
+  const isFetchingData = isLoading || isRefetching;
+
+  const fileDiff: FileDiffMetadata | null = React.useMemo(() => {
+    if (!isSuccess || !diff) return null;
+
+    const original = isAdded ? "" : (diff.original ?? "");
+    const modified = isDeleted ? "" : (diff.modified ?? "");
+
+    try {
+      return parseDiffFromFile(
+        { name: oldName, contents: original, lang: language },
+        { name: newName, contents: modified, lang: language },
       );
+    } catch (error) {
+      // Defensive fallback: parseDiffFromFile can fail on malformed/empty
+      // inputs. Log the real failure and show a non-loading fallback message.
+      console.error("Failed to parse diff for", filePath, error);
+      return null;
     }
-  }, []);
-
-  const updateSingleEditorHeight = React.useCallback(() => {
-    if (singleEditorRef.current) {
-      setEditorHeight(singleEditorRef.current.getContentHeight() + 20);
-    }
-  }, []);
-
-  const handleDiffEditorMount = (editor: editor_t.IStandaloneDiffEditor) => {
-    diffEditorRef.current = editor;
-    updateEditorHeight();
-    editor.getOriginalEditor().onDidContentSizeChange(updateEditorHeight);
-    editor.getModifiedEditor().onDidContentSizeChange(updateEditorHeight);
-  };
-
-  const handleSingleEditorMount = (editor: editor_t.IStandaloneCodeEditor) => {
-    singleEditorRef.current = editor;
-    updateSingleEditorHeight();
-    editor.onDidContentSizeChange(updateSingleEditorHeight);
-  };
+  }, [isSuccess, diff, oldName, newName, language, isAdded, isDeleted]);
 
   const status = (type === "U" ? STATUS_MAP.A : STATUS_MAP[type]) || "?";
   const statusIcon =
@@ -152,43 +146,16 @@ export function FileDiffViewer({ path, type, commit }: FileDiffViewerProps) {
       React.createElement(status, { className: "w-5 h-5" })
     );
 
-  const isFetchingData = isLoading || isRefetching;
-  const language = getLanguageFromPath(filePath);
-  const isMarkdownFile = language === "markdown";
-  const singleViewContent =
-    viewMode === "old" ? (diff?.original ?? "") : (diff?.modified ?? "");
-
   const renderContent = () => {
-    if (viewMode === "diff") {
-      return (
-        <EditorContainer height={editorHeight}>
-          <DiffEditor
-            data-testid="file-diff-viewer"
-            className="w-full h-full"
-            language={language}
-            original={isAdded ? "" : (diff?.original ?? "")}
-            modified={isDeleted ? "" : (diff?.modified ?? "")}
-            theme="custom-diff-theme"
-            onMount={handleDiffEditorMount}
-            beforeMount={beforeMount}
-            options={{
-              ...SHARED_EDITOR_OPTIONS,
-              renderSideBySide: !isAdded && !isDeleted,
-              hideUnchangedRegions: { enabled: true },
-            }}
-          />
-        </EditorContainer>
-      );
-    }
-
-    if (isMarkdownFile) {
+    if (isMarkdownFile && viewMode !== "diff") {
+      const content = viewMode === "old" ? diff?.original : diff?.modified;
       return (
         <div
           className="w-full border-b border-[var(--oh-border)] overflow-auto p-4 bg-base prose prose-invert max-w-none"
           data-testid="markdown-preview"
         >
           <MarkdownRenderer
-            content={singleViewContent}
+            content={content ?? ""}
             includeStandard
             includeHeadings
           />
@@ -196,19 +163,47 @@ export function FileDiffViewer({ path, type, commit }: FileDiffViewerProps) {
       );
     }
 
+    if (viewMode === "diff") {
+      if (!fileDiff) {
+        return (
+          <div
+            className="w-full border-b border-[var(--oh-border)] p-4 bg-base text-[var(--oh-text-dim)] text-sm"
+            data-testid="file-diff-empty"
+          >
+            {t(I18nKey.ERROR$GENERIC)}
+          </div>
+        );
+      }
+
+      return (
+        <CodeDiffContainer height={DIFF_EDITOR_HEIGHT}>
+          <FileDiff
+            fileDiff={fileDiff}
+            className="h-full w-full"
+            options={{
+              theme: FILE_DIFF_THEMES,
+              themeType: uiTheme,
+              diffStyle: isAdded || isDeleted ? "unified" : "split",
+              disableFileHeader: true,
+            }}
+          />
+        </CodeDiffContainer>
+      );
+    }
+
+    const content = viewMode === "old" ? diff?.original : diff?.modified;
     return (
-      <EditorContainer height={editorHeight}>
-        <Editor
-          data-testid="file-single-viewer"
-          className="w-full h-full"
-          language={language}
-          value={singleViewContent}
-          theme="custom-diff-theme"
-          beforeMount={beforeMount}
-          onMount={handleSingleEditorMount}
-          options={SHARED_EDITOR_OPTIONS}
+      <CodeDiffContainer height={DIFF_EDITOR_HEIGHT}>
+        <File
+          file={{ name: filePath, contents: content ?? "", lang: language }}
+          className="h-full w-full"
+          options={{
+            theme: FILE_DIFF_THEMES,
+            themeType: uiTheme,
+            disableFileHeader: true,
+          }}
         />
-      </EditorContainer>
+      </CodeDiffContainer>
     );
   };
 

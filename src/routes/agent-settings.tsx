@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate } from "react-router";
 import { useTranslation } from "react-i18next";
-import { AxiosError } from "axios";
+import type { AxiosError } from "#/utils/axios-error";
 import { useSettings } from "#/hooks/query/use-settings";
 import { useSaveSettings } from "#/hooks/mutation/use-save-settings";
 import { useAgentSettingsSchema } from "#/hooks/query/use-agent-settings-schema";

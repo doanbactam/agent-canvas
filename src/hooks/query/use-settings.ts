@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
+import { isAxiosError } from "#/utils/axios-error";
 import { DEFAULT_SETTINGS } from "#/services/settings";
 import { Settings, SettingsScope, SettingsValue } from "#/types/settings";
 import SettingsService from "#/api/settings-service/settings-service.api";
@@ -21,8 +21,8 @@ export const getErrorStatus = (error: unknown): number | undefined => {
     }
   }
 
-  if (axios.isAxiosError(error)) {
-    return error.response?.status;
+  if (isAxiosError(error)) {
+    return error.response?.status ?? error.status;
   }
 
   return undefined;

@@ -1,5 +1,4 @@
 import { RemoteWorkspace } from "@openhands/typescript-client/workspace/remote-workspace";
-import { AxiosError } from "axios";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   __resetActiveStoreForTests,
@@ -418,7 +417,7 @@ describe("AgentServerGitService", () => {
       test("resolves null when the runtime predates the endpoint (404)", async () => {
         // Arrange — the proxy hop surfaces upstream failures as AxiosErrors.
         vi.mocked(callCloudProxy).mockRejectedValue(
-          Object.assign(new AxiosError("Not Found"), {
+          Object.assign(new Error("Not Found"), {
             response: { status: 404 },
           }),
         );

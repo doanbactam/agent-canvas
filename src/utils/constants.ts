@@ -1,24 +1,5 @@
 import { SlashCommandItem } from "#/hooks/chat/use-slash-command";
 
-export const JSON_VIEW_THEME = {
-  base00: "transparent", // background
-  base01: "var(--cool-grey-900)", // lighter background
-  base02: "var(--cool-grey-700)", // selection background
-  base03: "var(--cool-grey-600)", // comments, invisibles
-  base04: "var(--cool-grey-500)", // dark foreground
-  base05: "var(--cool-grey-200)", // default foreground
-  base06: "var(--cool-grey-100)", // light foreground
-  base07: "#ffffff", // light background
-  base08: "#ff5370", // variables, red
-  base09: "#f78c6c", // integers, orange
-  base0A: "#ffcb6b", // booleans, yellow
-  base0B: "#c3e88d", // strings, green
-  base0C: "#89ddff", // support, cyan
-  base0D: "#82aaff", // functions, blue
-  base0E: "#c792ea", // keywords, purple
-  base0F: "#ff5370", // deprecated, red
-};
-
 export const PRODUCT_URL = {
   PRODUCTION: "https://app.all-hands.dev",
 };

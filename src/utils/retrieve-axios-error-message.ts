@@ -1,21 +1,12 @@
-import { AxiosError } from "axios";
 import {
+  isAxiosError,
   isAxiosErrorWithErrorField,
   isAxiosErrorWithMessageField,
-} from "./type-guards";
+} from "./axios-error";
 import { getUserFacingConnectionErrorMessage } from "./user-facing-error";
 
-function isAxiosError(error: unknown): error is AxiosError {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "isAxiosError" in error &&
-    (error as { isAxiosError?: unknown }).isAxiosError === true
-  );
-}
-
 /**
- * Retrieve the error message from an Axios error
+ * Retrieve the error message from an axios-compatible HTTP error.
  * @param error The error to render a toast for
  */
 export const retrieveAxiosErrorMessage = (error: unknown): string => {
@@ -24,14 +15,19 @@ export const retrieveAxiosErrorMessage = (error: unknown): string => {
 
   if (isAxiosError(error)) {
     shouldPreferExtractedMessage = true;
-    if (isAxiosErrorWithErrorField(error) && error.response?.data.error) {
-      errorMessage = error.response?.data.error;
-    } else if (
-      isAxiosErrorWithMessageField(error) &&
-      error.response?.data.message
-    ) {
-      errorMessage = error.response?.data.message;
-    } else {
+    if (isAxiosErrorWithErrorField(error)) {
+      const errorField = error.response?.data?.error;
+      if (typeof errorField === "string") {
+        errorMessage = errorField;
+      }
+    } else if (isAxiosErrorWithMessageField(error)) {
+      const messageField = error.response?.data?.message;
+      if (typeof messageField === "string") {
+        errorMessage = messageField;
+      }
+    }
+
+    if (errorMessage === null) {
       errorMessage = error.message;
     }
   } else if (error instanceof Error) {

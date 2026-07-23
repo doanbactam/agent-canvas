@@ -5,8 +5,8 @@
  * <state-dir>/logs/agent-canvas.YYYY-MM-DD.log (7-day retention) alongside
  * the existing console output (which is unchanged).
  *
- * winston is loaded dynamically and treated as optional: when it isn't
- * resolvable — most importantly inside the packaged Electron desktop app,
+ * rotating-file-stream is loaded dynamically and treated as optional: when it
+ * isn't resolvable — most importantly inside the packaged Electron desktop app,
  * whose `afterPack` hook strips `Resources/app/node_modules/` — `fileLog`
  * becomes a no-op and console logging continues to work unchanged. See
  * AGENTS.md "Electron desktop packaging" for the strip-hook details.
@@ -38,18 +38,16 @@ export function stripAnsi(str) {
 }
 
 /**
- * Attempt to construct a winston-backed file logger. Returns `null` if
- * winston isn't installed (packaged desktop app) or any setup step fails;
- * `fileLog` then degrades to a no-op.
+ * Attempt to construct a rotating file logger. Returns `null` when
+ * rotating-file-stream isn't installed (packaged desktop app) or any setup
+ * step fails; `fileLog` then degrades to a no-op.
  *
- * @returns {Promise<import("winston").Logger | null>}
+ * @returns {Promise<((level: string, message: string) => void) | null>}
  */
 async function createFileLogger() {
-  let winston;
-  let DailyRotateFileMod;
+  let rotatingFileStream;
   try {
-    winston = await import("winston");
-    DailyRotateFileMod = await import("winston-daily-rotate-file");
+    rotatingFileStream = await import("rotating-file-stream");
   } catch {
     return null;
   }
@@ -57,34 +55,32 @@ async function createFileLogger() {
   try {
     mkdirSync(logDir, { recursive: true });
 
-    const DailyRotateFile =
-      DailyRotateFileMod.default ?? DailyRotateFileMod;
-    const fileTransport = new DailyRotateFile({
-      dirname: logDir,
-      filename: "agent-canvas.%DATE%.log",
-      datePattern: "YYYY-MM-DD",
-      maxFiles: "7d",
-      auditFile: join(logDir, ".log-audit.json"),
-      createSymlink: false,
-    });
+    const pad = (num) => (num > 9 ? "" : "0") + num;
 
-    const logger = winston.createLogger({
-      level: "debug",
-      format: winston.format.combine(
-        winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
-        winston.format.printf(
-          ({ timestamp, level, message }) =>
-            `${timestamp} [${level.toUpperCase().padEnd(5)}] ${message}`,
-        ),
-      ),
-      transports: [fileTransport],
-    });
+    const fileStream = rotatingFileStream.createStream(
+      (time) => {
+        if (!time) return "agent-canvas.log";
+        const year = time.getFullYear();
+        const month = pad(time.getMonth() + 1);
+        const day = pad(time.getDate());
+        return `agent-canvas.${year}-${month}-${day}.log`;
+      },
+      {
+        path: logDir,
+        interval: "1d",
+        size: "10M",
+      },
+    );
 
     // Swallow any transport-level errors (e.g. disk full) so a logging
     // failure never crashes the dev server.
-    logger.on("error", () => {});
-    fileTransport.on("error", () => {});
-    return logger;
+    fileStream.on("error", () => {});
+
+    return (level, message) => {
+      const timestamp = new Date().toISOString().replace("T", " ").slice(0, 19);
+      const line = `${timestamp} [${level.toUpperCase().padEnd(5)}] ${stripAnsi(message)}\n`;
+      fileStream.write(line);
+    };
   } catch {
     return null;
   }
@@ -93,8 +89,8 @@ async function createFileLogger() {
 const fileLogger = await createFileLogger();
 
 /**
- * Write a message to the rotating log file. No-ops when winston isn't
- * available (e.g. the packaged desktop app). ANSI escape codes are
+ * Write a message to the rotating log file. No-ops when rotating-file-stream
+ * isn't available (e.g. the packaged desktop app). ANSI escape codes are
  * stripped automatically; console output is unaffected.
  *
  * @param {'info' | 'warn' | 'error' | 'debug'} level
@@ -102,5 +98,5 @@ const fileLogger = await createFileLogger();
  */
 export function fileLog(level, message) {
   if (!fileLogger) return;
-  fileLogger.log(level, stripAnsi(message));
+  fileLogger(level, message);
 }

@@ -1,7 +1,5 @@
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
-
 import { SyntaxHighlighter } from "#/components/features/markdown/syntax-highlighter";
-import { getPrismLanguageForFile } from "#/utils/file-language";
+import { getShikiLanguageForFile } from "#/utils/file-language";
 
 interface HighlightedSourceViewProps {
   path: string;
@@ -10,25 +8,25 @@ interface HighlightedSourceViewProps {
 }
 
 /**
- * Renders the raw bytes of a workspace text file with Prism syntax
- * highlighting. Used both in:
+ * Renders the raw bytes of a workspace text file with Shiki syntax highlighting.
+ * Used both in:
  *   - Rich mode for actual source files (.ts, .py, .yaml, …) — there is
  *     no "rich" rendering of source code, so highlighted source IS the
  *     rich view.
  *   - Plain mode for source code AND for the source form of markdown /
  *     HTML files (so users can inspect the markup behind a rich preview).
  *
- * When we don't have a Prism grammar for the file we fall through to a
- * plain `<pre>` so the bytes still show. The wrapper styling matches the
- * right-pane background so the highlighted block reads as part of the
- * surrounding chrome instead of a floating card.
+ * When we don't have a Shiki grammar for the file we fall through to a plain
+ * `<pre>` so the bytes still show. The wrapper styling matches the right-pane
+ * background so the highlighted block reads as part of the surrounding chrome
+ * instead of a floating card.
  */
 export function HighlightedSourceView({
   path,
   text,
   mimeType,
 }: HighlightedSourceViewProps) {
-  const language = getPrismLanguageForFile(path, mimeType);
+  const language = getShikiLanguageForFile(path, mimeType);
 
   if (!language) {
     return (
@@ -49,9 +47,8 @@ export function HighlightedSourceView({
     >
       <SyntaxHighlighter
         language={language}
-        style={vscDarkPlus}
         showLineNumbers
-        wrapLongLines={false}
+        className="h-full"
         // Override the theme's hard-coded background so the highlighter
         // blends with the right-pane chrome instead of painting a slab
         // of a slightly-different dark color.

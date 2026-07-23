@@ -1,6 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { AxiosError } from "axios";
+import type { AxiosError } from "#/utils/axios-error";
 import { Check } from "lucide-react";
 import { BrandButton } from "#/components/features/settings/brand-button";
 import { I18nKey } from "#/i18n/declaration";

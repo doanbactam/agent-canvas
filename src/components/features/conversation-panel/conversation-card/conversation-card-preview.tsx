@@ -1,15 +1,11 @@
 import type { ReactNode } from "react";
-import { Folder } from "lucide-react";
-import { FaBitbucket, FaGithub, FaGitlab } from "react-icons/fa6";
-import { FaCodeBranch } from "react-icons/fa";
-import type { IconType } from "react-icons/lib";
+import { Folder, GitBranch } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { I18nKey } from "#/i18n/declaration";
 import type { RepositorySelection } from "#/api/open-hands.types";
-import type { Provider } from "#/types/settings";
 import type { ExecutionStatus } from "#/types/agent-server/core/base/common";
 import type { SandboxStatus } from "#/api/conversation-service/agent-server-conversation-service.types";
-import AzureDevOpsLogo from "#/assets/branding/azure-devops-logo.svg?react";
+import { GitProviderIcon } from "#/components/shared/git-provider-icon";
 import { ConversationStatusDot } from "../conversation-status-dot";
 
 interface ConversationCardPreviewProps {
@@ -21,13 +17,6 @@ interface ConversationCardPreviewProps {
   llmModel?: string | null;
   createdAt?: string;
 }
-
-const providerIcon: Partial<Record<Provider, IconType>> = {
-  bitbucket: FaBitbucket,
-  bitbucket_data_center: FaBitbucket,
-  github: FaGithub,
-  gitlab: FaGitlab,
-};
 
 interface PreviewRowProps {
   label: string;
@@ -59,7 +48,6 @@ export function ConversationCardPreview({
   const repository = selectedRepository?.selected_repository ?? null;
   const branch = selectedRepository?.selected_branch ?? null;
   const provider = selectedRepository?.git_provider ?? null;
-  const ProviderIcon = provider ? providerIcon[provider] : null;
 
   const createdLabel = createdAt
     ? new Date(createdAt).toLocaleString(undefined, {
@@ -90,19 +78,19 @@ export function ConversationCardPreview({
           <>
             <PreviewRow label={t(I18nKey.CONVERSATION$REPOSITORY)}>
               <span className="inline-flex min-w-0 items-start gap-1.5">
-                {ProviderIcon ? (
-                  <ProviderIcon size={12} className="mt-0.5 shrink-0" />
-                ) : null}
-                {provider === "azure_devops" ? (
-                  <AzureDevOpsLogo className="mt-0.5 h-3 w-3 shrink-0" />
-                ) : null}
+                {provider && (
+                  <GitProviderIcon
+                    gitProvider={provider}
+                    className="mt-0.5 h-3 w-3 shrink-0"
+                  />
+                )}
                 <span className="break-all">{repository}</span>
               </span>
             </PreviewRow>
             {branch ? (
               <PreviewRow label={t(I18nKey.CONVERSATION$BRANCH)}>
                 <span className="inline-flex min-w-0 items-start gap-1.5">
-                  <FaCodeBranch size={11} className="mt-0.5 shrink-0" />
+                  <GitBranch className="mt-0.5 h-3 w-3 shrink-0" />
                   <span className="break-all">{branch}</span>
                 </span>
               </PreviewRow>

@@ -1,5 +1,5 @@
 import React from "react";
-import { AxiosError } from "axios";
+import type { AxiosError } from "#/utils/axios-error";
 import { ExtensionsNavigation } from "#/components/features/skills/extensions-navigation";
 import { useTranslation } from "react-i18next";
 import { I18nKey } from "#/i18n/declaration";

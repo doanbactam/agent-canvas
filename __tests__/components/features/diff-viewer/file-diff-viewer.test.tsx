@@ -22,12 +22,20 @@ vi.mock("#/hooks/query/use-unified-git-diff", () => ({
   }),
 }));
 
-vi.mock("@monaco-editor/react", () => ({
-  DiffEditor: (props: Record<string, unknown>) => (
-    <div data-testid="file-diff-viewer" data-original={props.original} data-modified={props.modified} />
+vi.mock("@pierre/diffs/react", () => ({
+  FileDiff: (props: { fileDiff?: { hunks?: unknown[]; type?: string } }) => (
+    <div
+      data-testid="file-diff-viewer"
+      data-hunks={props.fileDiff?.hunks?.length ?? 0}
+      data-type={props.fileDiff?.type}
+    />
   ),
-  Editor: (props: Record<string, unknown>) => (
-    <div data-testid="file-single-viewer" data-value={props.value} />
+  File: (props: { file: { contents?: string; name?: string } }) => (
+    <div
+      data-testid="file-single-viewer"
+      data-value={props.file.contents}
+      data-name={props.file.name}
+    />
   ),
 }));
 
@@ -184,6 +192,36 @@ describe("FileDiffViewer", () => {
       screen.queryByTestId("file-deleted-message"),
     ).not.toBeInTheDocument();
     expect(screen.getByTestId("file-diff-viewer")).toBeInTheDocument();
+  });
+
+  it("parses real diff metadata and passes it to FileDiff", async () => {
+    const user = userEvent.setup();
+    render(<FileDiffViewer path="src/index.ts" type="M" />);
+
+    await expand(user);
+
+    const diffViewer = screen.getByTestId("file-diff-viewer");
+    expect(diffViewer).toBeInTheDocument();
+    expect(diffViewer).toHaveAttribute("data-hunks", "1");
+    expect(diffViewer).toHaveAttribute("data-type", "change");
+  });
+
+  it("parses rename-only paths and preserves the old/new filenames", async () => {
+    mockDiff = { original: "same content", modified: "same content" };
+    const user = userEvent.setup();
+    render(<FileDiffViewer path="src/{old.ts => new.ts}" type="R" />);
+
+    await expand(user);
+
+    const diffViewer = screen.getByTestId("file-diff-viewer");
+    expect(diffViewer).toHaveAttribute("data-type", "rename-pure");
+    expect(diffViewer).toHaveAttribute("data-hunks", "0");
+
+    await user.click(screen.getByTestId("view-mode-old"));
+
+    const singleViewer = screen.getByTestId("file-single-viewer");
+    expect(singleViewer).toHaveAttribute("data-name", "src/new.ts");
+    expect(singleViewer).toHaveAttribute("data-value", "same content");
   });
 
   it("reflects the active view mode via aria-pressed on the toggle buttons", async () => {

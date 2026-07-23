@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { IoChevronDown, IoChevronForward } from "react-icons/io5";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { I18nKey } from "#/i18n/declaration";
 import { PluginSpec } from "#/api/conversation-service/agent-server-conversation-service.types";
 import { Typography } from "#/ui/typography";
@@ -46,9 +46,9 @@ export function PluginLaunchPluginSection({
           {getPluginDisplayName(plugin)}
         </Typography.Text>
         {isExpanded ? (
-          <IoChevronDown className="h-5 w-5 text-white" />
+          <ChevronDown className="h-5 w-5 text-white" />
         ) : (
-          <IoChevronForward className="h-5 w-5 text-white" />
+          <ChevronRight className="h-5 w-5 text-white" />
         )}
       </button>
 

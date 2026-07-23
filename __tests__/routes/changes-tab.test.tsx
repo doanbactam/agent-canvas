@@ -2,7 +2,6 @@ import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router";
-import { AxiosError } from "axios";
 import GitChanges from "#/routes/changes-tab";
 import { useUnifiedGetGitChanges } from "#/hooks/query/use-unified-get-git-changes";
 import { useAgentState } from "#/hooks/use-agent-state";
@@ -96,7 +95,7 @@ describe("Changes Tab", () => {
       isFetching: false,
       isSuccess: false,
       isError: true,
-      error: new AxiosError("fatal: not a git repository"),
+      error: new Error("fatal: not a git repository"),
       refetch: vi.fn(),
     });
     vi.mocked(useAgentState).mockReturnValue({

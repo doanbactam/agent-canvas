@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AxiosError } from "axios";
+import type { AxiosError } from "#/utils/axios-error";
 import { HttpError } from "@openhands/typescript-client";
 import { getApiErrorMessage } from "#/utils/api-error-message";
 
@@ -17,12 +17,14 @@ describe("getApiErrorMessage", () => {
   });
 
   it("returns the response body `message` from an axios error", () => {
-    // Arrange — local agent-server calls still reject with AxiosError.
-    const error = new AxiosError("Request failed with status code 500");
+    // Arrange — local agent-server calls still reject with axios-shaped errors.
+    const error = new Error(
+      "Request failed with status code 500",
+    ) as AxiosError;
     error.response = {
       status: 500,
       data: { message: "Runner exploded" },
-    } as never;
+    };
 
     // Act + Assert
     expect(getApiErrorMessage(error, "fallback")).toBe("Runner exploded");

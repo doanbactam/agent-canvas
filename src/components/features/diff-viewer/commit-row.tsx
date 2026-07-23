@@ -6,8 +6,15 @@ import { cn } from "#/utils/utils";
 import { formatTimeDelta } from "#/utils/format-time-delta";
 import ChevronUp from "#/icons/chveron-up.svg?react";
 import { useCommitChanges } from "#/hooks/query/use-commit-changes";
-import { FileDiffViewer } from "./file-diff-viewer";
 import { LoadingSpinner } from "./loading-spinner";
+
+// Lazy load the diff viewer; commits only render diffs after the user expands
+// a row, so there is no need to pay the diff bundle cost up front.
+const LazyFileDiffViewer = React.lazy(() =>
+  import("./file-diff-viewer").then((m) => ({
+    default: m.FileDiffViewer,
+  })),
+);
 
 export interface CommitRowProps {
   commit: GitCommit;
@@ -78,15 +85,24 @@ export function CommitRow({
               <LoadingSpinner className="w-4 h-4" />
             </div>
           )}
-          {isSuccess &&
-            changes?.map((change) => (
-              <FileDiffViewer
-                key={change.path}
-                path={change.path}
-                type={change.status}
-                commit={commit.sha}
-              />
-            ))}
+          {isSuccess && (
+            <React.Suspense
+              fallback={
+                <div className="p-3">
+                  <LoadingSpinner className="w-4 h-4" />
+                </div>
+              }
+            >
+              {changes?.map((change) => (
+                <LazyFileDiffViewer
+                  key={change.path}
+                  path={change.path}
+                  type={change.status}
+                  commit={commit.sha}
+                />
+              ))}
+            </React.Suspense>
+          )}
         </div>
       )}
     </div>

@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AxiosError, AxiosHeaders } from "axios";
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { createAxiosError } from "test-utils";
 import { useSwitchLlmProfile } from "#/hooks/mutation/use-switch-llm-profile";
 import AgentServerConversationService from "#/api/conversation-service/agent-server-conversation-service.api";
 import SettingsService from "#/api/settings-service/settings-service.api";
@@ -158,18 +158,10 @@ describe("useSwitchLlmProfile", () => {
   });
 
   it("prefers the server-provided error detail over the tailored fallback", async () => {
-    const axiosError = new AxiosError(
-      "Request failed",
-      "500",
-      undefined,
-      undefined,
-      {
-        status: 404,
-        statusText: "Not Found",
-        headers: new AxiosHeaders(),
-        config: { headers: new AxiosHeaders() },
-        data: { message: "LLM profile 'gpt-5' not found" },
-      },
+    const axiosError = createAxiosError(
+      404,
+      "Not Found",
+      { message: "LLM profile 'gpt-5' not found" },
     );
     vi.mocked(AgentServerConversationService.switchProfile).mockRejectedValue(
       axiosError,

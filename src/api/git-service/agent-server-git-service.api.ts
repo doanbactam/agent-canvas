@@ -1,4 +1,4 @@
-import { isAxiosError } from "axios";
+import { isAxiosError } from "#/utils/axios-error";
 import { RemoteWorkspace } from "@openhands/typescript-client/workspace/remote-workspace";
 import { mapAnyGitStatusToClientStatus } from "#/utils/git-status-mapper";
 import { buildHttpBaseUrl } from "#/utils/websocket-url";

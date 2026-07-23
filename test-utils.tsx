@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { I18nextProvider, initReactI18next } from "react-i18next";
 import i18n from "i18next";
 import { vi } from "vitest";
-import { AxiosError } from "axios";
+import type { AxiosError } from "#/utils/axios-error";
 import {
   ActionEvent,
   MessageEvent,
@@ -98,41 +98,33 @@ export function renderWithProviders(
   return render(ui, { wrapper: Wrapper, ...rtlRenderOptions });
 }
 
-export const createAxiosNotFoundErrorObject = () =>
-  new AxiosError(
-    "Request failed with status code 404",
-    "ERR_BAD_REQUEST",
-    undefined,
-    undefined,
-    {
-      status: 404,
-      statusText: "Not Found",
-      data: { message: "Settings not found" },
-      headers: {},
-      // @ts-expect-error - we only need the response object for this test
-      config: {},
-    },
-  );
+export const createAxiosNotFoundErrorObject = () => {
+  const err = new Error("Request failed with status code 404") as AxiosError;
+  err.response = {
+    status: 404,
+    statusText: "Not Found",
+    data: { message: "Settings not found" },
+    headers: {},
+  };
+  return err;
+};
 
 export const createAxiosError = (
   status: number,
   statusText: string,
   data: unknown,
-) =>
-  new AxiosError(
+) => {
+  const err = new Error(
     `Request failed with status code ${status}`,
-    "ERR_BAD_REQUEST",
-    undefined,
-    undefined,
-    {
-      status,
-      statusText,
-      data,
-      headers: {},
-      // @ts-expect-error - we only need the response object for this test
-      config: {},
-    },
-  );
+  ) as AxiosError;
+  err.response = {
+    status,
+    statusText,
+    data,
+    headers: {},
+  };
+  return err;
+};
 
 // Helper to create a PlanningFileEditorAction event
 export const createPlanningFileEditorActionEvent = (

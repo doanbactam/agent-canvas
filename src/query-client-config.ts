@@ -1,5 +1,5 @@
 import { QueryCache, MutationCache, QueryClient } from "@tanstack/react-query";
-import { AxiosError } from "axios";
+import { isAxiosError } from "#/utils/axios-error";
 import i18n from "#/i18n";
 import { I18nKey } from "./i18n/declaration";
 import { retrieveAxiosErrorMessage } from "./utils/retrieve-axios-error-message";
@@ -7,23 +7,18 @@ import { displayErrorToast } from "./utils/custom-toast-handlers";
 import { getActiveBackend } from "#/api/backend-registry/active-store";
 import { recordBackendSuccess } from "#/api/backend-registry/health-store";
 
-const handle401Error = (error: AxiosError, client: QueryClient) => {
-  if (error?.response?.status === 401 || error?.status === 401) {
+const handle401Error = (error: unknown, client: QueryClient) => {
+  if (isAxiosError(error) && (error.response?.status ?? error.status) === 401) {
     client.invalidateQueries({ queryKey: ["user", "authenticated"] });
   }
 };
 
 const isActiveCloudBackendAuthError = (error: unknown) => {
-  if (!(error instanceof AxiosError)) return false;
-  if (error.response?.status !== 401 && error.status !== 401) return false;
+  if (!isAxiosError(error)) return false;
+  if ((error.response?.status ?? error.status) !== 401) return false;
 
   const activeBackend = getActiveBackend().backend;
-  if (activeBackend.kind !== "cloud") return false;
-
-  const requestUrl = error.config?.url;
-  return (
-    !requestUrl || requestUrl.startsWith(activeBackend.host.replace(/\/+$/, ""))
-  );
+  return activeBackend.kind === "cloud";
 };
 
 const shownErrors = new Set<string>();

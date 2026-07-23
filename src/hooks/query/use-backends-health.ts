@@ -1,5 +1,5 @@
 import React from "react";
-import axios from "axios";
+import { isAxiosError } from "#/utils/axios-error";
 import { useQueries } from "@tanstack/react-query";
 import { HttpError } from "@openhands/typescript-client";
 import {
@@ -98,7 +98,8 @@ async function probeBackend(backend: Backend): Promise<true> {
       }
     } catch (error) {
       if (
-        (axios.isAxiosError(error) && error.response?.status === 401) ||
+        (isAxiosError(error) &&
+          (error.response?.status ?? error.status) === 401) ||
         (error instanceof HttpError && error.status === 401)
       ) {
         throw new Error(CLOUD_BACKEND_LOGGED_OUT_ERROR);

@@ -1,34 +1,22 @@
-import { FaBitbucket, FaGithub, FaGitlab } from "react-icons/fa6";
-import { FaCodeBranch } from "react-icons/fa";
-import { IconType } from "react-icons/lib";
-import { RepositorySelection } from "#/api/open-hands.types";
-import { Provider } from "#/types/settings";
-import AzureDevOpsLogo from "#/assets/branding/azure-devops-logo.svg?react";
+import { GitBranch } from "lucide-react";
+import type { RepositorySelection } from "#/api/open-hands.types";
+import { GitProviderIcon } from "#/components/shared/git-provider-icon";
 
 interface ConversationRepoLinkProps {
   selectedRepository: RepositorySelection;
 }
 
-const providerIcon: Partial<Record<Provider, IconType>> = {
-  bitbucket: FaBitbucket,
-  bitbucket_data_center: FaBitbucket,
-  github: FaGithub,
-  gitlab: FaGitlab,
-};
-
 export function ConversationRepoLink({
   selectedRepository,
 }: ConversationRepoLinkProps) {
-  const Icon = selectedRepository.git_provider
-    ? providerIcon[selectedRepository.git_provider]
-    : null;
-
   return (
     <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
       <div className="flex min-w-0 items-center gap-1">
-        {Icon && <Icon size={14} className="shrink-0 text-[var(--oh-muted)]" />}
-        {selectedRepository.git_provider === "azure_devops" && (
-          <AzureDevOpsLogo className="h-[14px] w-[14px] shrink-0 text-[var(--oh-muted)]" />
+        {selectedRepository.git_provider && (
+          <GitProviderIcon
+            gitProvider={selectedRepository.git_provider}
+            className="h-3.5 w-3.5 shrink-0 text-[var(--oh-muted)]"
+          />
         )}
         <span
           data-testid="conversation-card-selected-repository"
@@ -38,7 +26,7 @@ export function ConversationRepoLink({
         </span>
       </div>
       <div className="flex min-w-0 items-center gap-1">
-        <FaCodeBranch size={12} className="shrink-0 text-[var(--oh-muted)]" />
+        <GitBranch className="h-3 w-3 shrink-0 text-[var(--oh-muted)]" />
 
         <span
           data-testid="conversation-card-selected-branch"

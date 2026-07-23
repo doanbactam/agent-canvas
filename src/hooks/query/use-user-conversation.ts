@@ -1,7 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useRef } from "react";
 import { Query, useQuery } from "@tanstack/react-query";
-import { AxiosError } from "axios";
+import type { AxiosError } from "#/utils/axios-error";
 import AgentServerConversationService from "#/api/conversation-service/agent-server-conversation-service.api";
 import { AppConversation } from "#/api/conversation-service/agent-server-conversation-service.types";
 import { useActiveBackend } from "#/contexts/active-backend-context";
@@ -12,7 +11,7 @@ const FIFTEEN_MINUTES = 1000 * 60 * 15;
 type RefetchInterval = (
   query: Query<
     AppConversation | null,
-    AxiosError<unknown, any>,
+    AxiosError<unknown>,
     AppConversation | null,
     (string | null)[]
   >,

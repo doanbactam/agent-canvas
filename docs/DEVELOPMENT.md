@@ -4,9 +4,15 @@ This document is for contributors working on `agent-canvas` itself.
 
 ## Recommended local workflow
 
-`npm run dev` runs the full local stack (agent-server + automation backend via
-`uvx`, Vite dev server with live reload, and an ingress proxy) — all without
-Docker.
+`npm run dev` runs the lightweight local stack (agent-server via `uvx`, Vite
+dev server with live reload, and an ingress proxy) — all without Docker. The
+automation backend is optional and no longer started by default.
+
+To include the automation backend, use:
+
+```sh
+npm run dev:automation
+```
 
 For a static frontend build (better for slow networks, remote access, tunnels):
 
@@ -42,16 +48,17 @@ it instead.
 | `OH_AUTOMATION_GIT_REF`   | Git ref for automation backend | `main`  |
 | `OH_AGENT_SERVER_GIT_REF` | Git ref for agent-server       | `main`  |
 
-### Alternative: Minimal Mode (without Automation)
+### Full stack (with Automation)
 
-To run without the automation service:
+To run with the automation backend as well:
 
 ```sh
-npm run dev:minimal
+npm run dev:automation
 ```
 
-This runs only agent-server + Vite (no automation backend or ingress).
-Access at `http://localhost:3001/`
+`npm run dev:minimal` is an alias for the default `npm run dev` and runs only
+agent-server + Vite (no automation backend or ingress). Access at
+`http://localhost:3001/`
 
 ### Agent server version selection
 
