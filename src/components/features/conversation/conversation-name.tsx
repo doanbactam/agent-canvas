@@ -14,7 +14,12 @@ import { HooksModal } from "../conversation-panel/hooks-modal";
 import { ConfirmDeleteModal } from "../conversation-panel/confirm-delete-modal";
 import { ConfirmStopModal } from "../conversation-panel/confirm-stop-modal";
 import { MetricsModal } from "./metrics-modal/metrics-modal";
-import { TranscriptExportModal } from "./transcript-export-modal";
+
+const TranscriptExportModal = React.lazy(() =>
+  import("./transcript-export-modal").then((m) => ({
+    default: m.TranscriptExportModal,
+  })),
+);
 
 export function ConversationName() {
   const { t } = useTranslation("openhands");
@@ -215,14 +220,16 @@ export function ConversationName() {
       />
 
       {transcriptExportModalVisible && conversationId && (
-        <TranscriptExportModal
-          conversationId={conversationId}
-          conversationUrl={conversation.conversation_url}
-          sessionApiKey={conversation.session_api_key}
-          conversationTitle={conversation.title}
-          model={conversation.llm_model}
-          onClose={() => setTranscriptExportModalVisible(false)}
-        />
+        <React.Suspense fallback={null}>
+          <TranscriptExportModal
+            conversationId={conversationId}
+            conversationUrl={conversation.conversation_url}
+            sessionApiKey={conversation.session_api_key}
+            conversationTitle={conversation.title}
+            model={conversation.llm_model}
+            onClose={() => setTranscriptExportModalVisible(false)}
+          />
+        </React.Suspense>
       )}
 
       {/* System Message Modal */}
