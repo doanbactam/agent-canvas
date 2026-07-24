@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { I18nKey } from "#/i18n/declaration";
 import {
@@ -29,9 +30,17 @@ export function MarketplaceSection({
 }: MarketplaceSectionProps) {
   const { t } = useTranslation("openhands");
 
-  const visibleEntries = getMarketplaceEntriesByPopularity(
-    getMcpMarketplaceCatalog(MCP_MARKETPLACE),
-  ).filter((entry) => marketplaceEntryMatchesQuery(entry, query));
+  const catalog = useMemo(
+    () => getMcpMarketplaceCatalog(MCP_MARKETPLACE),
+    [MCP_MARKETPLACE],
+  );
+  const visibleEntries = useMemo(
+    () =>
+      getMarketplaceEntriesByPopularity(catalog).filter((entry) =>
+        marketplaceEntryMatchesQuery(entry, query),
+      ),
+    [catalog, query],
+  );
 
   return (
     <section
@@ -61,8 +70,8 @@ export function MarketplaceSection({
               <MarketplaceCard
                 key={entry.id}
                 entry={entry}
-                onClick={() => onSelect(entry)}
-                onAdd={() => onAdd(entry)}
+                onSelect={onSelect}
+                onAdd={onAdd}
               />
             ))}
           </div>

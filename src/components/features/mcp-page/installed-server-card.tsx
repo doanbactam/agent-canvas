@@ -20,8 +20,8 @@ import { McpServerHealthSection } from "./mcp-server-health";
 
 interface InstalledServerCardProps {
   server: MCPServerConfig;
-  onEdit: () => void;
-  onDelete: () => void;
+  onEdit: (server: MCPServerConfig) => void;
+  onDelete: (server: MCPServerConfig) => void;
 }
 
 function getServerTransportLabel(type: MCPServerConfig["type"]) {
@@ -46,27 +46,48 @@ function getServerDetailLine(server: MCPServerConfig): string {
   return server.url ?? "";
 }
 
-export function InstalledServerCard({
+function InstalledServerCardImpl({
   server,
   onEdit,
   onDelete,
 }: InstalledServerCardProps) {
   const { t } = useTranslation("openhands");
-  const catalog = findCatalogEntryForServer(
-    server,
-    getMcpMarketplaceCatalog(MCP_MARKETPLACE),
+  const catalog = React.useMemo(
+    () =>
+      findCatalogEntryForServer(
+        server,
+        getMcpMarketplaceCatalog(MCP_MARKETPLACE),
+      ),
+    [server],
   );
 
-  const title = getInstalledServerTitle(server, catalog);
-  const detailLine = getServerDetailLine(server);
-  const transport = getServerTransportLabel(server.type);
+  const title = React.useMemo(
+    () => getInstalledServerTitle(server, catalog),
+    [server, catalog],
+  );
+  const detailLine = React.useMemo(() => getServerDetailLine(server), [server]);
+  const transport = React.useMemo(
+    () => getServerTransportLabel(server.type),
+    [server.type],
+  );
 
-  const handleKeyDown = (event: React.KeyboardEvent) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      onEdit();
-    }
-  };
+  const handleEdit = React.useCallback(() => {
+    onEdit(server);
+  }, [onEdit, server]);
+
+  const handleDelete = React.useCallback(() => {
+    onDelete(server);
+  }, [onDelete, server]);
+
+  const handleKeyDown = React.useCallback(
+    (event: React.KeyboardEvent) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        handleEdit();
+      }
+    },
+    [handleEdit],
+  );
 
   return (
     <div
@@ -74,7 +95,7 @@ export function InstalledServerCard({
       data-server-id={server.id}
       role="button"
       tabIndex={0}
-      onClick={onEdit}
+      onClick={handleEdit}
       onKeyDown={handleKeyDown}
       aria-label={t(I18nKey.MCP$EDIT_SERVER_ARIA, { name: title })}
       className={cn(
@@ -102,7 +123,7 @@ export function InstalledServerCard({
               isSelected
               onToggle={(selected) => {
                 if (!selected) {
-                  onDelete();
+                  handleDelete();
                 }
               }}
               enableLabelKey={I18nKey.MCP$TOGGLE_ADD_SERVER}
@@ -132,10 +153,12 @@ export function InstalledServerCard({
           <McpServerHealthSection
             server={server}
             catalog={catalog}
-            onEdit={onEdit}
+            onEdit={handleEdit}
           />
         </div>
       </div>
     </div>
   );
 }
+
+export const InstalledServerCard = React.memo(InstalledServerCardImpl);

@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from "react";
+import { useMemo, useCallback, memo, type KeyboardEvent } from "react";
 import { I18nKey } from "#/i18n/declaration";
 import type { IntegrationCatalogEntry as MarketplaceEntry } from "@openhands/extensions/integrations";
 import { McpLogoBadge } from "#/components/features/mcp-logo-badge";
@@ -12,17 +12,13 @@ import {
 
 interface MarketplaceCardProps {
   entry: MarketplaceEntry;
-  onClick: () => void;
-  onAdd: () => void;
+  onSelect: (entry: MarketplaceEntry) => void;
+  onAdd: (entry: MarketplaceEntry) => void;
 }
 
-export function MarketplaceCard({
-  entry,
-  onClick,
-  onAdd,
-}: MarketplaceCardProps) {
-  const transport = getDefaultMcpTransport(entry);
-  const transportLabel = (() => {
+function MarketplaceCardImpl({ entry, onSelect, onAdd }: MarketplaceCardProps) {
+  const transport = useMemo(() => getDefaultMcpTransport(entry), [entry]);
+  const transportLabel = useMemo(() => {
     switch (transport?.kind) {
       case "stdio":
         return "STDIO";
@@ -33,24 +29,40 @@ export function MarketplaceCard({
       default:
         return "";
     }
-  })();
+  }, [transport]);
 
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.target !== event.currentTarget) {
-      return;
-    }
+  const handleClick = useCallback(() => {
+    onSelect(entry);
+  }, [onSelect, entry]);
 
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      onClick();
-    }
-  };
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>) => {
+      if (event.target !== event.currentTarget) {
+        return;
+      }
+
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        handleClick();
+      }
+    },
+    [handleClick],
+  );
+
+  const handleToggle = useCallback(
+    (selected: boolean) => {
+      if (selected) {
+        onAdd(entry);
+      }
+    },
+    [onAdd, entry],
+  );
 
   return (
     <div
       role="button"
       tabIndex={0}
-      onClick={onClick}
+      onClick={handleClick}
       onKeyDown={handleKeyDown}
       data-testid={`mcp-marketplace-card-${entry.id}`}
       className={cn(
@@ -72,11 +84,7 @@ export function MarketplaceCard({
             <CirclePlusCheckToggle
               testId={`mcp-marketplace-toggle-${entry.id}`}
               isSelected={false}
-              onToggle={(selected) => {
-                if (selected) {
-                  onAdd();
-                }
-              }}
+              onToggle={handleToggle}
               enableLabelKey={I18nKey.MCP$TOGGLE_ADD_SERVER}
               disableLabelKey={I18nKey.MCP$TOGGLE_ADD_SERVER}
             />
@@ -89,3 +97,5 @@ export function MarketplaceCard({
     </div>
   );
 }
+
+export const MarketplaceCard = memo(MarketplaceCardImpl);

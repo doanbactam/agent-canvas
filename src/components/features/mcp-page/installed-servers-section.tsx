@@ -21,7 +21,7 @@ interface InstalledServersSectionProps {
   /** Current search query — empty string means no filter applied. */
   query?: string;
   onEdit: (server: MCPServerConfig) => void;
-  onDelete: (serverId: string) => void;
+  onDelete: (server: MCPServerConfig) => void;
 }
 
 export function InstalledServersSection({
@@ -75,8 +75,8 @@ export function InstalledServersSection({
           <InstalledServerCard
             key={server.id}
             server={server}
-            onEdit={() => onEdit(server)}
-            onDelete={() => onDelete(server.id)}
+            onEdit={onEdit}
+            onDelete={onDelete}
           />
         ))}
       </div>
