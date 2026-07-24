@@ -116,53 +116,55 @@ export default function AutomationsList() {
     [filtered],
   );
 
-  const handleToggle = (id: string, currentEnabled: boolean) => {
-    const willEnable = !currentEnabled;
-    toggleMutation.mutate({ id, enabled: willEnable });
-    if (willEnable) {
-      const automation = data?.automations.find((a) => a.id === id);
-      trackPrebuiltAutomationEnabled({
-        automationId: id,
-        automationName: automation?.name ?? id,
+  const handleToggle = useCallback(
+    (automation: Automation) => {
+      const willEnable = !automation.enabled;
+      toggleMutation.mutate({ id: automation.id, enabled: willEnable });
+      if (willEnable) {
+        trackPrebuiltAutomationEnabled({
+          automationId: automation.id,
+          automationName: automation.name,
+        });
+      }
+    },
+    [toggleMutation, trackPrebuiltAutomationEnabled],
+  );
+
+  const handleRunNow = useCallback(
+    (id: string) => {
+      dispatchMutation.mutate(id, {
+        onSuccess: () => {
+          displaySuccessToast(t(I18nKey.AUTOMATIONS$RUN_NOW_SUCCESS));
+        },
+        onError: (error) => {
+          displayErrorToast(
+            getApiErrorMessage(error, t(I18nKey.AUTOMATIONS$RUN_NOW_ERROR)),
+          );
+        },
       });
-    }
-  };
+    },
+    [dispatchMutation, t],
+  );
 
-  const handleRunNow = (id: string) => {
-    dispatchMutation.mutate(id, {
-      onSuccess: () => {
-        displaySuccessToast(t(I18nKey.AUTOMATIONS$RUN_NOW_SUCCESS));
-      },
-      onError: (error) => {
-        displayErrorToast(
-          getApiErrorMessage(error, t(I18nKey.AUTOMATIONS$RUN_NOW_ERROR)),
-        );
-      },
-    });
-  };
+  const handleDeleteRequest = useCallback((automation: Automation) => {
+    setDeleteTarget({ id: automation.id, name: automation.name });
+  }, []);
 
-  const handleDeleteRequest = (id: string) => {
-    const automation = data?.automations.find((a) => a.id === id);
-    if (automation) {
-      setDeleteTarget({ id, name: automation.name });
-    }
-  };
+  const handleEditRequest = useCallback((automation: Automation) => {
+    setEditTarget(automation);
+  }, []);
 
-  const handleEditRequest = (id: string) => {
-    const automation = data?.automations.find((a) => a.id === id);
-    if (automation) {
-      setEditTarget(automation);
-    }
-  };
-
-  const handleExport = (automation: Automation) => {
-    const contents = `${JSON.stringify(serializeAutomation(automation), null, 2)}\n`;
-    downloadBlob(
-      new Blob([contents], { type: "application/json" }),
-      getAutomationExportFilename(automation),
-    );
-    trackAutomationExported({ backendKind: active.backend.kind });
-  };
+  const handleExport = useCallback(
+    (automation: Automation) => {
+      const contents = `${JSON.stringify(serializeAutomation(automation), null, 2)}\n`;
+      downloadBlob(
+        new Blob([contents], { type: "application/json" }),
+        getAutomationExportFilename(automation),
+      );
+      trackAutomationExported({ backendKind: active.backend.kind });
+    },
+    [active.backend.kind, trackAutomationExported],
+  );
 
   const handleImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const input = event.currentTarget;
@@ -186,7 +188,7 @@ export default function AutomationsList() {
     }
   };
 
-  const handleImportConfirm = () => {
+  const handleImportConfirm = useCallback(() => {
     if (!importSpec) return;
 
     importMutation.mutate(
@@ -207,14 +209,14 @@ export default function AutomationsList() {
         },
       },
     );
-  };
+  }, [importMutation, importSpec, t]);
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = useCallback(() => {
     if (deleteTarget) {
       deleteMutation.mutate(deleteTarget.id);
       setDeleteTarget(null);
     }
-  };
+  }, [deleteMutation, deleteTarget]);
 
   const handleViewModeChange = useCallback((view: AutomationViewMode) => {
     setViewMode(view);

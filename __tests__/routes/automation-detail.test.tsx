@@ -23,7 +23,7 @@ import type { Automation, AutomationRunsResponse } from "#/types/automation";
 vi.mock("#/api/automation-service/automation-service.api", () => ({
   default: {
     getAutomation: vi.fn(),
-    getAutomationRuns: vi.fn(),
+    listAutomationRuns: vi.fn(),
     toggleAutomation: vi.fn(),
     deleteAutomation: vi.fn(),
     dispatchAutomation: vi.fn(),
@@ -99,8 +99,8 @@ beforeEach(() => {
 
   vi.mocked(AutomationService.getAutomation).mockReset();
   vi.mocked(AutomationService.getAutomation).mockResolvedValue(automation);
-  vi.mocked(AutomationService.getAutomationRuns).mockReset();
-  vi.mocked(AutomationService.getAutomationRuns).mockResolvedValue(emptyRuns);
+  vi.mocked(AutomationService.listAutomationRuns).mockReset();
+  vi.mocked(AutomationService.listAutomationRuns).mockResolvedValue(emptyRuns);
   setRegisteredBackends([localBackend, cloudBackend]);
   setActiveSelection({ backendId: localBackend.id });
 });

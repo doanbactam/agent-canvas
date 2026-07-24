@@ -26,7 +26,7 @@ export function useAutomations(options: UseAutomationsOptions = {}) {
       active.backend.id,
       active.orgId,
     ],
-    queryFn: () => AutomationService.getAutomations(limit, offset),
+    queryFn: () => AutomationService.listAutomations({ limit, offset }),
     staleTime: 0,
     enabled,
   });

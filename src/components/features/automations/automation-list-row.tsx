@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, memo } from "react";
 import { useTranslation } from "react-i18next";
 import { I18nKey } from "#/i18n/declaration";
 import type { Automation } from "#/types/automation";
@@ -21,15 +21,15 @@ import {
 
 interface AutomationListRowProps {
   automation: Automation;
-  onToggle: (id: string, enabled: boolean) => void;
+  onToggle: (automation: Automation) => void;
   onRunNow: (id: string) => void;
   isRunPending?: boolean;
-  onDelete: (id: string) => void;
+  onDelete: (automation: Automation) => void;
   onExport: (automation: Automation) => void;
-  onEdit?: (id: string) => void;
+  onEdit?: (automation: Automation) => void;
 }
 
-export function AutomationListRow({
+function AutomationListRowImpl({
   automation,
   onToggle,
   onRunNow,
@@ -135,3 +135,5 @@ export function AutomationListRow({
     </tr>
   );
 }
+
+export const AutomationListRow = memo(AutomationListRowImpl);

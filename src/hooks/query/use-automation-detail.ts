@@ -48,7 +48,7 @@ export function useAutomationRuns(options: UseAutomationRunsOptions) {
       active.backend.id,
       active.orgId,
     ],
-    queryFn: () => AutomationService.getAutomationRuns(id, limit, offset),
+    queryFn: () => AutomationService.listAutomationRuns(id, { limit, offset }),
     staleTime: 60 * 1000,
     enabled: !!id && enabled,
     // Poll while any run is non-terminal so status and conversation_id

@@ -174,24 +174,6 @@ describe("AutomationService", () => {
     });
   });
 
-  describe("getAutomations", () => {
-    it("delegates to listAutomations", async () => {
-      const response: AutomationsResponse = {
-        automations: [mockAutomation],
-        total: 1,
-      };
-      vi.spyOn(AutomationService, "listAutomations").mockResolvedValue(response);
-
-      const result = await AutomationService.getAutomations(10, 5);
-
-      expect(AutomationService.listAutomations).toHaveBeenCalledWith({
-        limit: 10,
-        offset: 5,
-      });
-      expect(result).toEqual(response);
-    });
-  });
-
   describe("getAutomation", () => {
     it("fetches a single automation by id", async () => {
       localOfetch.mockResolvedValueOnce(mockAutomation);
@@ -304,23 +286,6 @@ describe("AutomationService", () => {
           query: { limit: 50, offset: 0 },
         }),
       );
-    });
-  });
-
-  describe("getAutomationRuns", () => {
-    it("delegates to listAutomationRuns", async () => {
-      const response: AutomationRunsResponse = { runs: [], total: 0 };
-      vi.spyOn(AutomationService, "listAutomationRuns").mockResolvedValue(
-        response,
-      );
-
-      const result = await AutomationService.getAutomationRuns("1", 25, 5);
-
-      expect(AutomationService.listAutomationRuns).toHaveBeenCalledWith("1", {
-        limit: 25,
-        offset: 5,
-      });
-      expect(result).toEqual(response);
     });
   });
 

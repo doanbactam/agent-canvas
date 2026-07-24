@@ -17,12 +17,12 @@ interface AutomationGroupProps {
   count: number;
   automations: Automation[];
   view: AutomationViewMode;
-  onToggle: (id: string, enabled: boolean) => void;
+  onToggle: (automation: Automation) => void;
   onRunNow: (id: string) => void;
   runPendingId?: string | null;
-  onDelete: (id: string) => void;
+  onDelete: (automation: Automation) => void;
   onExport: (automation: Automation) => void;
-  onEdit?: (id: string) => void;
+  onEdit?: (automation: Automation) => void;
 }
 
 export function AutomationGroup({

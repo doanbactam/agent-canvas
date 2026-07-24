@@ -266,13 +266,6 @@ class AutomationService {
     return data;
   }
 
-  static async getAutomations(
-    limit = 50,
-    offset = 0,
-  ): Promise<AutomationsResponse> {
-    return AutomationService.listAutomations({ limit, offset });
-  }
-
   static async getAutomation(id: string): Promise<Automation> {
     const active = getActiveBackend().backend;
     const path = `${AUTOMATION_BASE_PATH}/v1/${encodeURIComponent(id)}`;
@@ -432,14 +425,6 @@ class AutomationService {
       { params: { limit, offset } },
     );
     return data;
-  }
-
-  static async getAutomationRuns(
-    id: string,
-    limit = 50,
-    offset = 0,
-  ): Promise<AutomationRunsResponse> {
-    return AutomationService.listAutomationRuns(id, { limit, offset });
   }
 
   static async toggleAutomation(
