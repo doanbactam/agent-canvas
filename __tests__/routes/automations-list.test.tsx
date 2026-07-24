@@ -25,7 +25,7 @@ import {
 
 vi.mock("#/api/automation-service/automation-service.api", () => ({
   default: {
-    getAutomations: vi.fn(),
+    listAutomations: vi.fn(),
     updateAutomation: vi.fn(),
     toggleAutomation: vi.fn(),
     deleteAutomation: vi.fn(),
@@ -94,8 +94,8 @@ beforeEach(() => {
   __resetActiveStoreForTests();
   vi.mocked(AutomationService.checkHealth).mockReset();
   vi.mocked(AutomationService.checkHealth).mockResolvedValue({ status: "ok" });
-  vi.mocked(AutomationService.getAutomations).mockReset();
-  vi.mocked(AutomationService.getAutomations).mockResolvedValue(listResponse);
+  vi.mocked(AutomationService.listAutomations).mockReset();
+  vi.mocked(AutomationService.listAutomations).mockResolvedValue(listResponse);
   vi.mocked(AutomationService.updateAutomation).mockReset();
   vi.mocked(AutomationService.dispatchAutomation).mockReset();
   setRegisteredBackends([localBackend, cloudBackend]);
@@ -114,7 +114,7 @@ describe("AutomationsList — Edit from the row kebab is local-only", () => {
     const user = userEvent.setup();
     renderList();
     await waitFor(() => {
-      expect(AutomationService.getAutomations).toHaveBeenCalledTimes(1);
+      expect(AutomationService.listAutomations).toHaveBeenCalledTimes(1);
     });
     await screen.findByText(automation.name);
 
@@ -141,7 +141,7 @@ describe("AutomationsList — Edit from the row kebab is local-only", () => {
     const user = userEvent.setup();
     renderList();
     await waitFor(() => {
-      expect(AutomationService.getAutomations).toHaveBeenCalledTimes(1);
+      expect(AutomationService.listAutomations).toHaveBeenCalledTimes(1);
     });
     await screen.findByText(automation.name);
 
@@ -165,7 +165,7 @@ describe("AutomationsList — view mode toggle", () => {
     const user = userEvent.setup();
     renderList();
     await waitFor(() => {
-      expect(AutomationService.getAutomations).toHaveBeenCalledTimes(1);
+      expect(AutomationService.listAutomations).toHaveBeenCalledTimes(1);
     });
     await screen.findByTestId("automation-card-auto-1");
 
@@ -185,14 +185,14 @@ describe("AutomationsList — view mode toggle", () => {
 
   it("disables the view-mode toggle when the user has no automations", async () => {
     // Arrange — service returns an empty list, so the page lands on EmptyState.
-    vi.mocked(AutomationService.getAutomations).mockResolvedValue({
+    vi.mocked(AutomationService.listAutomations).mockResolvedValue({
       automations: [],
       total: 0,
     });
     const user = userEvent.setup();
     renderList();
     await waitFor(() => {
-      expect(AutomationService.getAutomations).toHaveBeenCalledTimes(1);
+      expect(AutomationService.listAutomations).toHaveBeenCalledTimes(1);
     });
 
     // Act — try to open the toggle's grid/list menu.
@@ -252,7 +252,7 @@ describe("AutomationsList — Run now toasts", () => {
   it("does not dispatch when Run now is clicked on a disabled automation (grid view)", async () => {
     // Arrange — single automation that is turned off.
     const disabledAutomation: Automation = { ...automation, enabled: false };
-    vi.mocked(AutomationService.getAutomations).mockResolvedValue({
+    vi.mocked(AutomationService.listAutomations).mockResolvedValue({
       automations: [disabledAutomation],
       total: 1,
     });
@@ -275,7 +275,7 @@ describe("AutomationsList — Run now toasts", () => {
     // then return a single disabled automation.
     window.localStorage.setItem("openhands-automations-view", "list");
     const disabledAutomation: Automation = { ...automation, enabled: false };
-    vi.mocked(AutomationService.getAutomations).mockResolvedValue({
+    vi.mocked(AutomationService.listAutomations).mockResolvedValue({
       automations: [disabledAutomation],
       total: 1,
     });
@@ -353,7 +353,7 @@ describe("AutomationsList — list freshness on remount", () => {
       id: "auto-2",
       name: "Hello World",
     };
-    vi.mocked(AutomationService.getAutomations)
+    vi.mocked(AutomationService.listAutomations)
       .mockReset()
       .mockResolvedValueOnce(listResponse)
       .mockResolvedValueOnce({

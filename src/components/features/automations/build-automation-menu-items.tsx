@@ -15,9 +15,9 @@ interface BuildAutomationMenuItemsOptions {
   isRunPending: boolean;
   onView: () => void;
   onExport: (automation: Automation) => void;
-  onEdit?: (id: string) => void;
-  onToggle: (id: string, enabled: boolean) => void;
-  onDelete: (id: string) => void;
+  onEdit?: (automation: Automation) => void;
+  onToggle: (automation: Automation) => void;
+  onDelete: (automation: Automation) => void;
 }
 
 export function buildAutomationMenuItems({
@@ -58,7 +58,7 @@ export function buildAutomationMenuItems({
           {
             label: t(I18nKey.AUTOMATIONS$EDIT),
             icon: <EditIcon className="size-4" />,
-            onClick: () => onEdit(automation.id),
+            onClick: () => onEdit(automation),
           },
         ]
       : []),
@@ -69,12 +69,12 @@ export function buildAutomationMenuItems({
               ? t(I18nKey.AUTOMATIONS$TURN_OFF)
               : t(I18nKey.AUTOMATIONS$TURN_ON),
             icon: <PowerIcon className="size-4" />,
-            onClick: () => onToggle(automation.id, automation.enabled),
+            onClick: () => onToggle(automation),
           },
           {
             label: t(I18nKey.AUTOMATIONS$DELETE),
             icon: <TrashIcon className="size-4" />,
-            onClick: () => onDelete(automation.id),
+            onClick: () => onDelete(automation),
           },
         ]
       : []),

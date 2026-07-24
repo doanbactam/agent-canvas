@@ -33,9 +33,9 @@ import * as telemetry from "#/services/telemetry";
 
 vi.mock("#/api/automation-service/automation-service.api", () => ({
   default: {
-    getAutomations: vi.fn(),
+    listAutomations: vi.fn(),
     getAutomation: vi.fn(),
-    getAutomationRuns: vi.fn(),
+    listAutomationRuns: vi.fn(),
     dispatchAutomation: vi.fn(),
     deleteAutomation: vi.fn(),
     updateAutomation: vi.fn(),
@@ -109,9 +109,9 @@ beforeEach(() => {
   captureMock = vi.spyOn(telemetry, "trackEvent").mockResolvedValue(undefined);
   window.localStorage.clear();
   __resetActiveStoreForTests();
-  vi.mocked(AutomationService.getAutomations).mockReset();
+  vi.mocked(AutomationService.listAutomations).mockReset();
   vi.mocked(AutomationService.getAutomation).mockReset();
-  vi.mocked(AutomationService.getAutomationRuns).mockReset();
+  vi.mocked(AutomationService.listAutomationRuns).mockReset();
   vi.mocked(AutomationService.dispatchAutomation).mockReset();
   vi.mocked(AutomationService.dispatchAutomation).mockResolvedValue(
     automationRun,
@@ -123,7 +123,7 @@ beforeEach(() => {
   vi.mocked(AutomationService.updateAutomation).mockResolvedValue(automation);
   vi.mocked(AutomationService.toggleAutomation).mockResolvedValue(automation);
 
-  vi.mocked(AutomationService.getAutomations).mockResolvedValue(listResponse);
+  vi.mocked(AutomationService.listAutomations).mockResolvedValue(listResponse);
   vi.mocked(AutomationService.getAutomation).mockResolvedValue(automation);
   setRegisteredBackends([localBackend, cloudBackend]);
   setActiveSelection({ backendId: localBackend.id });
@@ -143,7 +143,7 @@ describe("automation hooks — backend switch", () => {
       { wrapper: makeWrapper() },
     );
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(AutomationService.getAutomations).toHaveBeenCalledTimes(1);
+    expect(AutomationService.listAutomations).toHaveBeenCalledTimes(1);
 
     // Act — flip the active backend to a cloud one.
     setActiveSelection({ backendId: cloudBackend.id });
@@ -152,7 +152,7 @@ describe("automation hooks — backend switch", () => {
     // query (the key includes active.backend.id + active.orgId), so a
     // second fetch fires automatically without any explicit invalidate.
     await waitFor(() => {
-      expect(AutomationService.getAutomations).toHaveBeenCalledTimes(2);
+      expect(AutomationService.listAutomations).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -216,7 +216,7 @@ describe("useAutomationRuns — polling", () => {
         runs: [completedRun],
         total: 1,
       };
-      vi.mocked(AutomationService.getAutomationRuns)
+      vi.mocked(AutomationService.listAutomationRuns)
         .mockResolvedValueOnce(pendingResponse)
         .mockResolvedValue(completedResponse);
 
@@ -228,14 +228,14 @@ describe("useAutomationRuns — polling", () => {
 
       // Assert: the initial fetch fires once.
       await waitFor(() => {
-        expect(AutomationService.getAutomationRuns).toHaveBeenCalledTimes(1);
+        expect(AutomationService.listAutomationRuns).toHaveBeenCalledTimes(1);
       });
 
       // The cached data still contains a PENDING run, so refetchInterval
       // engages and a second fetch arrives within the poll window.
       await waitFor(
         () => {
-          expect(AutomationService.getAutomationRuns).toHaveBeenCalledTimes(2);
+          expect(AutomationService.listAutomationRuns).toHaveBeenCalledTimes(2);
         },
         { timeout: 5000 },
       );
@@ -246,7 +246,7 @@ describe("useAutomationRuns — polling", () => {
       await new Promise((resolve) => {
         setTimeout(resolve, 4000);
       });
-      expect(AutomationService.getAutomationRuns).toHaveBeenCalledTimes(2);
+      expect(AutomationService.listAutomationRuns).toHaveBeenCalledTimes(2);
     },
     15000,
   );
