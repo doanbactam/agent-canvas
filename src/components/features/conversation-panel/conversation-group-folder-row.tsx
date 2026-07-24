@@ -97,7 +97,7 @@ export function ConversationGroupFolderRow({
         <div
           className={cn(
             "flex h-8 w-full min-w-0 items-center gap-0.5 rounded-md pl-2 pr-1 text-sm font-normal",
-            "text-[var(--oh-muted)] transition-colors hover:bg-[var(--oh-surface-raised)] hover:text-white",
+            "text-muted transition-colors hover:bg-surface-raised hover:text-foreground",
           )}
         >
           <button
@@ -186,7 +186,7 @@ export function ConversationGroupFolderRow({
             className={cn(
               "inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md",
               "text-inherit transition-colors",
-              "hover:bg-white/10 hover:text-white",
+              "hover:bg-foreground/10 hover:text-foreground",
               "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--oh-border)]",
               "disabled:cursor-not-allowed disabled:opacity-50",
             )}
@@ -223,7 +223,7 @@ export function ConversationGroupFolderRow({
                   type="button"
                   data-testid={`thread-folder-view-more-${groupTestIdSuffix}`}
                   onClick={onTogglePreviewExpanded}
-                  className="cursor-pointer text-xs text-[var(--oh-text-dim)] hover:text-white"
+                  className="cursor-pointer text-xs text-[var(--oh-text-dim)] hover:text-foreground"
                 >
                   {isShowingAll
                     ? t(I18nKey.CONVERSATION_PANEL$LESS)

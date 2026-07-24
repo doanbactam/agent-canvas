@@ -173,8 +173,7 @@ export function ConversationTabsContextMenu({
               <div
                 className={cn(
                   "group flex h-[30px] w-full min-w-0 items-stretch rounded",
-                  !isArchivedConversation &&
-                    "hover:bg-[var(--oh-interactive-hover)]",
+                  !isArchivedConversation && "hover:bg-interactive-hover",
                   isArchivedConversation && "opacity-50",
                 )}
               >
@@ -183,7 +182,7 @@ export function ConversationTabsContextMenu({
                   data-testid={`conversation-tabs-menu-open-${tab}`}
                   disabled={isArchivedConversation}
                   className={cn(
-                    "flex min-w-0 flex-1 items-center gap-2 rounded-l p-2 text-start text-white",
+                    "flex min-w-0 flex-1 items-center gap-2 rounded-l p-2 text-start text-foreground",
                     dropdownInstantColorClassName,
                     isArchivedConversation
                       ? "cursor-not-allowed"
@@ -204,11 +203,11 @@ export function ConversationTabsContextMenu({
                   data-testid={`conversation-tabs-menu-pin-${tab}`}
                   disabled={isArchivedConversation}
                   className={cn(
-                    "flex shrink-0 items-center justify-center rounded-r px-2 text-white",
+                    "flex shrink-0 items-center justify-center rounded-r px-2 text-foreground",
                     dropdownInstantColorClassName,
                     isArchivedConversation
                       ? "cursor-not-allowed"
-                      : "cursor-pointer hover:bg-white/10",
+                      : "cursor-pointer hover:bg-foreground/10",
                   )}
                   aria-pressed={pinned}
                   aria-label={

@@ -48,7 +48,7 @@ export function GitControlBarBranchButton({
       className={cn(
         "group flex flex-row items-center justify-between gap-2 pl-2.5 pr-2.5 py-1 rounded-[100px] w-fit flex-shrink-0 max-w-[200px] truncate relative",
         hasLinkableBranch
-          ? "border border-[var(--oh-border)] bg-transparent hover:border-[var(--oh-border-subtle)] cursor-pointer"
+          ? "border border-border bg-transparent hover:border-subtle cursor-pointer"
           : "border border-[rgba(71,74,84,0.50)] bg-transparent cursor-not-allowed min-w-[108px]",
       )}
     >
@@ -56,7 +56,7 @@ export function GitControlBarBranchButton({
         <BranchIcon width={12} height={12} color="white" />
       </div>
       <div
-        className="font-normal text-white text-sm leading-5 truncate"
+        className="font-normal text-foreground text-sm leading-5 truncate"
         title={buttonText}
       >
         {buttonText}
