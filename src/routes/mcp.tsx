@@ -56,36 +56,51 @@ export default function MCPPage() {
   const [sectionFilter, setSectionFilter] =
     React.useState<McpSectionFilter>("all");
 
-  const mcpConfig = parseMcpConfig(settings?.agent_settings?.mcp_config);
-  const allServers = flattenMcpConfig(mcpConfig);
-  const mcpMarketplace = getMcpMarketplaceCatalog(MCP_MARKETPLACE);
+  const mcpConfig = React.useMemo(
+    () => parseMcpConfig(settings?.agent_settings?.mcp_config),
+    [settings?.agent_settings?.mcp_config],
+  );
+  const allServers = React.useMemo(
+    () => flattenMcpConfig(mcpConfig),
+    [mcpConfig],
+  );
+  const mcpMarketplace = React.useMemo(
+    () => getMcpMarketplaceCatalog(MCP_MARKETPLACE),
+    [MCP_MARKETPLACE],
+  );
 
   // Filter installed servers by the search query. We pair each server
   // with its catalog entry (if any) so the search can match friendly
   // names like "Slack" against a stdio server whose own `.name` is
   // just "slack".
-  const filteredInstalledServers = allServers.filter((server) =>
-    installedServerMatchesQuery(
-      server,
-      findCatalogEntryForServer(server, mcpMarketplace),
-      searchQuery,
-    ),
+  const filteredInstalledServers = React.useMemo(
+    () =>
+      allServers.filter((server) =>
+        installedServerMatchesQuery(
+          server,
+          findCatalogEntryForServer(server, mcpMarketplace),
+          searchQuery,
+        ),
+      ),
+    [allServers, mcpMarketplace, searchQuery],
   );
 
-  const handleMarketplaceInstall = (entry: MarketplaceEntry) => {
-    setInstallEntry(entry);
-  };
+  const handleMarketplaceInstall = React.useCallback(
+    (entry: MarketplaceEntry) => {
+      setInstallEntry(entry);
+    },
+    [],
+  );
 
-  const handleEdit = (server: MCPServerConfig) => {
+  const handleEdit = React.useCallback((server: MCPServerConfig) => {
     setEditingServer(server);
-  };
+  }, []);
 
-  const handleDeleteClick = (serverId: string) => {
-    const target = allServers.find((s) => s.id === serverId);
-    if (target) setServerToDelete(target);
-  };
+  const handleDeleteClick = React.useCallback((server: MCPServerConfig) => {
+    setServerToDelete(server);
+  }, []);
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = React.useCallback(() => {
     if (!serverToDelete) return;
     // Pass the full server config — useDeleteMcpServer re-resolves its
     // position against the fresh settings at mutation time, so a
@@ -102,7 +117,7 @@ export default function MCPPage() {
         setServerToDelete(null);
       },
     });
-  };
+  }, [deleteMcpServer, serverToDelete, t]);
 
   if (isLoading || !settings) {
     return (
