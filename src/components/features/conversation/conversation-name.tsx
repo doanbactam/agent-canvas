@@ -13,7 +13,11 @@ import { SkillsModal } from "../conversation-panel/skills-modal";
 import { HooksModal } from "../conversation-panel/hooks-modal";
 import { ConfirmDeleteModal } from "../conversation-panel/confirm-delete-modal";
 import { ConfirmStopModal } from "../conversation-panel/confirm-stop-modal";
-import { MetricsModal } from "./metrics-modal/metrics-modal";
+const MetricsModal = React.lazy(() =>
+  import("./metrics-modal/metrics-modal").then((m) => ({
+    default: m.MetricsModal,
+  })),
+);
 
 const TranscriptExportModal = React.lazy(() =>
   import("./transcript-export-modal").then((m) => ({
@@ -214,10 +218,14 @@ export function ConversationName() {
       </div>
 
       {/* Metrics Modal */}
-      <MetricsModal
-        isOpen={metricsModalVisible}
-        onOpenChange={setMetricsModalVisible}
-      />
+      {metricsModalVisible && (
+        <React.Suspense fallback={null}>
+          <MetricsModal
+            isOpen={metricsModalVisible}
+            onOpenChange={setMetricsModalVisible}
+          />
+        </React.Suspense>
+      )}
 
       {transcriptExportModalVisible && conversationId && (
         <React.Suspense fallback={null}>
