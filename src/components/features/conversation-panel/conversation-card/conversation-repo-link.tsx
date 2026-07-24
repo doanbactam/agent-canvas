@@ -15,22 +15,22 @@ export function ConversationRepoLink({
         {selectedRepository.git_provider && (
           <GitProviderIcon
             gitProvider={selectedRepository.git_provider}
-            className="h-3.5 w-3.5 shrink-0 text-[var(--oh-muted)]"
+            className="h-3.5 w-3.5 shrink-0 text-muted"
           />
         )}
         <span
           data-testid="conversation-card-selected-repository"
-          className="min-w-0 truncate text-xs text-[var(--oh-muted)]"
+          className="min-w-0 truncate text-xs text-muted"
         >
           {selectedRepository.selected_repository}
         </span>
       </div>
       <div className="flex min-w-0 items-center gap-1">
-        <GitBranch className="h-3 w-3 shrink-0 text-[var(--oh-muted)]" />
+        <GitBranch className="h-3 w-3 shrink-0 text-muted" />
 
         <span
           data-testid="conversation-card-selected-branch"
-          className="min-w-0 truncate text-xs text-[var(--oh-muted)]"
+          className="min-w-0 truncate text-xs text-muted"
         >
           {selectedRepository.selected_branch}
         </span>

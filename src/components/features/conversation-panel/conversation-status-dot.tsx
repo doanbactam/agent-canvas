@@ -94,7 +94,7 @@ function renderIndicator(visual: Visual) {
       return (
         <span
           data-testid="conversation-status-paused"
-          className="w-1.5 h-1.5 rounded-full bg-[var(--oh-muted)]"
+          className="w-1.5 h-1.5 rounded-full bg-muted"
         />
       );
     case "error":
@@ -108,7 +108,7 @@ function renderIndicator(visual: Visual) {
       return (
         <span
           data-testid="conversation-status-unknown"
-          className="w-1.5 h-1.5 rounded-full bg-[var(--oh-color-tertiary)]"
+          className="w-1.5 h-1.5 rounded-full bg-tertiary"
         />
       );
   }
@@ -137,7 +137,7 @@ export function ConversationStatusDot({
   const indicator = isArchived ? (
     <Archive
       data-testid="conversation-status-archived"
-      className="shrink-0 h-2.5 w-2.5 text-[var(--oh-muted)] opacity-60"
+      className="shrink-0 h-2.5 w-2.5 text-muted opacity-60"
       aria-hidden
     />
   ) : (
@@ -157,7 +157,7 @@ export function ConversationStatusDot({
       content={label}
       placement="right"
       showArrow
-      tooltipClassName="bg-base text-white text-xs shadow-lg"
+      tooltipClassName="bg-base text-foreground text-xs shadow-lg"
     >
       {dot}
     </StyledTooltip>

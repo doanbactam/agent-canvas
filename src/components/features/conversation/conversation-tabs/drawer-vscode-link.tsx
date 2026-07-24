@@ -35,8 +35,8 @@ export function DrawerVSCodeLink() {
       title={t(I18nKey.VSCODE$OPEN)}
       data-testid="drawer-vscode-link"
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-[7px] border border-[var(--oh-border)] bg-base-secondary px-2 py-1 text-xs",
-        "text-[var(--oh-muted)] transition-colors hover:enabled:bg-surface-raised hover:enabled:text-white",
+        "inline-flex items-center gap-1.5 rounded-[7px] border border-border bg-base-secondary px-2 py-1 text-xs",
+        "text-muted transition-colors hover:enabled:bg-surface-raised hover:enabled:text-foreground",
         "cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
       )}
     >

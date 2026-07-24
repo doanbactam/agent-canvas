@@ -42,7 +42,7 @@ export function HooksModal({ onClose }: HooksModalProps) {
     <ModalBackdrop onClose={onClose}>
       <ModalBody
         width="lg"
-        className="relative max-h-[80vh] flex flex-col items-start border border-[var(--oh-border)]"
+        className="relative max-h-[80vh] flex flex-col items-start border border-border"
         testID="hooks-modal"
       >
         <HooksModalHeader
@@ -52,7 +52,7 @@ export function HooksModal({ onClose }: HooksModalProps) {
           onClose={onClose}
         />
 
-        <div className="w-full h-[60vh] overflow-auto rounded-md border border-[var(--oh-border)] bg-surface-raised custom-scrollbar-always">
+        <div className="w-full h-[60vh] overflow-auto rounded-md border border-border bg-surface-raised custom-scrollbar-always">
           {!isAgentReady ? (
             <RuntimeWaitingState testId="hooks-runtime-waiting" />
           ) : isLoading ? (
