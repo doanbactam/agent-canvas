@@ -8,11 +8,24 @@ import { displaySuccessToast } from "#/utils/custom-toast-handlers";
 import { I18nKey } from "#/i18n/declaration";
 import { EllipsisButton } from "../conversation-panel/ellipsis-button";
 import { ConversationNameContextMenu } from "./conversation-name-context-menu";
-import { SystemMessageModal } from "../conversation-panel/system-message-modal";
-import { SkillsModal } from "../conversation-panel/skills-modal";
-import { HooksModal } from "../conversation-panel/hooks-modal";
 import { ConfirmDeleteModal } from "../conversation-panel/confirm-delete-modal";
 import { ConfirmStopModal } from "../conversation-panel/confirm-stop-modal";
+
+const SystemMessageModal = React.lazy(() =>
+  import("../conversation-panel/system-message-modal").then((m) => ({
+    default: m.SystemMessageModal,
+  })),
+);
+const SkillsModal = React.lazy(() =>
+  import("../conversation-panel/skills-modal").then((m) => ({
+    default: m.SkillsModal,
+  })),
+);
+const HooksModal = React.lazy(() =>
+  import("../conversation-panel/hooks-modal").then((m) => ({
+    default: m.HooksModal,
+  })),
+);
 const MetricsModal = React.lazy(() =>
   import("./metrics-modal/metrics-modal").then((m) => ({
     default: m.MetricsModal,
@@ -240,38 +253,42 @@ export function ConversationName() {
         </React.Suspense>
       )}
 
-      {/* System Message Modal */}
-      <SystemMessageModal
-        isOpen={systemModalVisible}
-        onClose={() => setSystemModalVisible(false)}
-        systemMessage={systemMessage || null}
-      />
+      <React.Suspense fallback={null}>
+        {/* System Message Modal */}
+        {systemModalVisible && (
+          <SystemMessageModal
+            isOpen={systemModalVisible}
+            onClose={() => setSystemModalVisible(false)}
+            systemMessage={systemMessage || null}
+          />
+        )}
 
-      {/* Skills Modal */}
-      {skillsModalVisible && (
-        <SkillsModal onClose={() => setSkillsModalVisible(false)} />
-      )}
+        {/* Skills Modal */}
+        {skillsModalVisible && (
+          <SkillsModal onClose={() => setSkillsModalVisible(false)} />
+        )}
 
-      {/* Hooks Modal */}
-      {hooksModalVisible && (
-        <HooksModal onClose={() => setHooksModalVisible(false)} />
-      )}
+        {/* Hooks Modal */}
+        {hooksModalVisible && (
+          <HooksModal onClose={() => setHooksModalVisible(false)} />
+        )}
 
-      {/* Confirm Delete Modal */}
-      {confirmDeleteModalVisible && (
-        <ConfirmDeleteModal
-          onConfirm={handleConfirmDelete}
-          onCancel={() => setConfirmDeleteModalVisible(false)}
-          conversationTitle={conversation?.title || ""}
-        />
-      )}
+        {/* Confirm Delete Modal */}
+        {confirmDeleteModalVisible && (
+          <ConfirmDeleteModal
+            onConfirm={handleConfirmDelete}
+            onCancel={() => setConfirmDeleteModalVisible(false)}
+            conversationTitle={conversation?.title || ""}
+          />
+        )}
 
-      {confirmStopModalVisible && (
-        <ConfirmStopModal
-          onConfirm={handleConfirmStop}
-          onCancel={() => setConfirmStopModalVisible(false)}
-        />
-      )}
+        {confirmStopModalVisible && (
+          <ConfirmStopModal
+            onConfirm={handleConfirmStop}
+            onCancel={() => setConfirmStopModalVisible(false)}
+          />
+        )}
+      </React.Suspense>
     </>
   );
 }
