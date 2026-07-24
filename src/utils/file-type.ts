@@ -7,7 +7,7 @@
 
 export type WorkspaceFileKind = "text" | "image" | "pdf" | "binary";
 
-export const IMAGE_EXTENSIONS = new Set([
+const IMAGE_EXTENSIONS = new Set([
   "png",
   "jpg",
   "jpeg",
@@ -19,16 +19,16 @@ export const IMAGE_EXTENSIONS = new Set([
   "avif",
 ]);
 
-export const PDF_EXTENSIONS = new Set(["pdf"]);
+const PDF_EXTENSIONS = new Set(["pdf"]);
 
 /** Formats we render as raw HTML (or HTML-like markup) in an iframe. */
-export const HTML_LIKE_EXTS = new Set(["html", "htm", "svg"]);
+const HTML_LIKE_EXTS = new Set(["html", "htm", "svg"]);
 
 /** Formats we render with the markdown renderer in rich mode. */
-export const MARKDOWN_EXTS = new Set(["md", "markdown", "mdx"]);
+const MARKDOWN_EXTS = new Set(["md", "markdown", "mdx"]);
 
 /** Office/document formats we can't preview inline. */
-export const OFFICE_DOCUMENT_LABELS: Record<string, string> = {
+const OFFICE_DOCUMENT_LABELS: Record<string, string> = {
   pptx: "PowerPoint",
   ppt: "PowerPoint",
   docx: "Word",
@@ -38,9 +38,14 @@ export const OFFICE_DOCUMENT_LABELS: Record<string, string> = {
 };
 
 export function getFileExtension(path: string): string {
-  const idx = path.lastIndexOf(".");
-  if (idx === -1) return "";
-  return path.slice(idx + 1).toLowerCase();
+  // Mirror the basename-aware extension parser in file-language.ts so
+  // backslash paths, dotfiles, and files without an extension behave the
+  // same across the codebase.
+  const slashIdx = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+  const basename = path.slice(slashIdx + 1);
+  const dotIdx = basename.lastIndexOf(".");
+  if (dotIdx <= 0) return "";
+  return basename.slice(dotIdx + 1).toLowerCase();
 }
 
 export function isImageExtension(ext: string): boolean {

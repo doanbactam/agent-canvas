@@ -1,3 +1,5 @@
+import { getFileExtension } from "./file-type";
+
 // Map a workspace-file path to a Shiki language id (or `null` when we don't
 // have a registered grammar for it, in which case the caller should fall
 // back to plain pre/text rendering).
@@ -139,14 +141,6 @@ const FILENAME_TO_LANGUAGE: Record<string, string> = {
   ".dockerignore": "bash",
 };
 
-function getExtension(path: string): string {
-  const slashIdx = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
-  const basename = path.slice(slashIdx + 1);
-  const dotIdx = basename.lastIndexOf(".");
-  if (dotIdx <= 0) return "";
-  return basename.slice(dotIdx + 1).toLowerCase();
-}
-
 function getBasename(path: string): string {
   const slashIdx = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
   return path.slice(slashIdx + 1).toLowerCase();
@@ -175,7 +169,7 @@ export function getShikiLanguageForFile(
   const fromBasename = FILENAME_TO_LANGUAGE[basename];
   if (fromBasename) return fromBasename;
 
-  const ext = getExtension(path);
+  const ext = getFileExtension(path);
   if (ext && EXTENSION_TO_LANGUAGE[ext]) {
     return EXTENSION_TO_LANGUAGE[ext];
   }

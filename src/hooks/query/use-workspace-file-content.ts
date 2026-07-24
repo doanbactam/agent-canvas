@@ -16,6 +16,8 @@ import {
   guessMimeType,
 } from "#/utils/file-type";
 
+export type { WorkspaceFileKind } from "#/utils/file-type";
+
 export interface WorkspaceFileContent {
   path: string;
   kind: WorkspaceFileKind;

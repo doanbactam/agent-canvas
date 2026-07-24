@@ -77,10 +77,4 @@ function HighlightedSourceViewImpl({
   );
 }
 
-export const HighlightedSourceView = React.memo(
-  HighlightedSourceViewImpl,
-  (prev, next) =>
-    prev.path === next.path &&
-    prev.text === next.text &&
-    prev.mimeType === next.mimeType,
-);
+export const HighlightedSourceView = React.memo(HighlightedSourceViewImpl);
