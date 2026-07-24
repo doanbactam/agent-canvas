@@ -15,6 +15,11 @@ interface FileQuickRowProps {
   onToggleTree: () => void;
 }
 
+// Cap the number of quick-access pills so a giant workspace doesn't force
+// the browser to measure/render hundreds of absolutely-positioned overflow
+// items in this row. The full list is always available in the file tree.
+const MAX_QUICK_FILES = 20;
+
 /**
  * Horizontal "quick access" row of files at the top of the file viewer.
  * Important entrypoints (index.html, README.md, package.json, …) appear
@@ -32,6 +37,19 @@ export function FileQuickRow({
   const { t } = useTranslation("openhands");
 
   const sortedByPriority = useMemo(() => sortFilesByPriority(paths), [paths]);
+
+  const displayPaths = useMemo<string[]>(() => {
+    // Make sure the selected file is always visible in the quick row even
+    // if it falls outside the top N by priority.
+    const inList = selectedPath ? paths.includes(selectedPath) : false;
+    const head = inList && selectedPath ? [selectedPath] : [];
+    return [
+      ...head,
+      ...sortedByPriority.filter((p) => p !== selectedPath),
+    ].slice(0, MAX_QUICK_FILES);
+  }, [sortedByPriority, selectedPath, paths]);
+
+  const overflowCount = Math.max(0, paths.length - displayPaths.length);
 
   return (
     <div
@@ -62,9 +80,9 @@ export function FileQuickRow({
         <ListTree className="w-3 h-3" aria-hidden strokeWidth={2} />
       </button>
 
-      {sortedByPriority.length > 0 && (
+      {displayPaths.length > 0 && (
         <div className="flex flex-nowrap items-center gap-1.5 overflow-hidden flex-1 min-w-0">
-          {sortedByPriority.map((path) => {
+          {displayPaths.map((path) => {
             const isSelected = selectedPath === path;
             return (
               <button
@@ -84,6 +102,15 @@ export function FileQuickRow({
               </button>
             );
           })}
+          {overflowCount > 0 && (
+            <span
+              className="inline-flex items-center px-2 py-0.5 text-xs whitespace-nowrap rounded-md text-[var(--oh-muted)] bg-[var(--oh-surface-raised)]"
+              title={t(I18nKey.FILES$MORE_FILES)}
+              data-testid="file-quick-row-more"
+            >
+              +{overflowCount}
+            </span>
+          )}
         </div>
       )}
     </div>

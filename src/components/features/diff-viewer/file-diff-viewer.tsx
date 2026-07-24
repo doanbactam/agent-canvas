@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { GitChangeStatus } from "#/api/open-hands.types";
 import { I18nKey } from "#/i18n/declaration";
-import { getLanguageFromPath } from "#/utils/get-language-from-path";
+import { getShikiLanguageForFile } from "#/utils/file-language";
 import { cn } from "#/utils/utils";
 import { useAgentServerUITheme } from "#/hooks/use-agent-server-ui-theme";
 import { useUnifiedGitDiff } from "#/hooks/query/use-unified-git-diff";
@@ -39,7 +39,13 @@ const STATUS_MAP: Record<GitChangeStatus, string | LucideIcon> = {
   U: "Untracked",
 };
 
-const DIFF_EDITOR_HEIGHT = 400;
+// Match the default virtual-file metrics inside @pierre/diffs so the
+// CodeDiffContainer hugs the content for small diffs while capping the
+// viewport for large ones (which keeps the virtualizer's work bounded).
+const DIFF_LINE_HEIGHT = 20;
+const DIFF_CONTAINER_PADDING = 16; // spacing top + bottom
+const MIN_DIFF_HEIGHT = 100;
+const MAX_DIFF_HEIGHT = 600;
 
 const FILE_DIFF_THEMES = {
   dark: "pierre-dark",
@@ -85,7 +91,7 @@ function splitRenamePath(path: string) {
   return { oldName: path, newName: path };
 }
 
-export function FileDiffViewer({ path, type, commit }: FileDiffViewerProps) {
+function FileDiffViewerImpl({ path, type, commit }: FileDiffViewerProps) {
   const { t } = useTranslation("openhands");
   const [isCollapsed, setIsCollapsed] = React.useState(true);
   const [viewMode, setViewMode] = React.useState<ViewMode>("diff");
@@ -115,7 +121,7 @@ export function FileDiffViewer({ path, type, commit }: FileDiffViewerProps) {
     commit,
   });
 
-  const language = getLanguageFromPath(filePath);
+  const language = getShikiLanguageForFile(filePath) ?? "text";
   const isMarkdownFile = language === "markdown";
   const isFetchingData = isLoading || isRefetching;
 
@@ -137,6 +143,30 @@ export function FileDiffViewer({ path, type, commit }: FileDiffViewerProps) {
       return null;
     }
   }, [isSuccess, diff, oldName, newName, language, isAdded, isDeleted]);
+
+  const estimatedLineCount = React.useMemo(() => {
+    if (viewMode === "diff") {
+      return fileDiff
+        ? isAdded || isDeleted
+          ? fileDiff.unifiedLineCount
+          : fileDiff.splitLineCount
+        : 1;
+    }
+    const content = viewMode === "old" ? diff?.original : diff?.modified;
+    return content ? content.split("\n").length : 1;
+  }, [viewMode, fileDiff, isAdded, isDeleted, diff]);
+
+  const diffHeight = React.useMemo(
+    () =>
+      Math.max(
+        MIN_DIFF_HEIGHT,
+        Math.min(
+          MAX_DIFF_HEIGHT,
+          estimatedLineCount * DIFF_LINE_HEIGHT + DIFF_CONTAINER_PADDING,
+        ),
+      ),
+    [estimatedLineCount],
+  );
 
   const status = (type === "U" ? STATUS_MAP.A : STATUS_MAP[type]) || "?";
   const statusIcon =
@@ -176,7 +206,7 @@ export function FileDiffViewer({ path, type, commit }: FileDiffViewerProps) {
       }
 
       return (
-        <CodeDiffContainer height={DIFF_EDITOR_HEIGHT}>
+        <CodeDiffContainer height={diffHeight}>
           <FileDiff
             fileDiff={fileDiff}
             className="h-full w-full"
@@ -193,7 +223,7 @@ export function FileDiffViewer({ path, type, commit }: FileDiffViewerProps) {
 
     const content = viewMode === "old" ? diff?.original : diff?.modified;
     return (
-      <CodeDiffContainer height={DIFF_EDITOR_HEIGHT}>
+      <CodeDiffContainer height={diffHeight}>
         <File
           file={{ name: filePath, contents: content ?? "", lang: language }}
           className="h-full w-full"
@@ -264,3 +294,7 @@ export function FileDiffViewer({ path, type, commit }: FileDiffViewerProps) {
     </div>
   );
 }
+
+export const FileDiffViewer = React.memo(FileDiffViewerImpl);
+
+export default FileDiffViewer;

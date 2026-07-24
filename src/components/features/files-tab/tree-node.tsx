@@ -18,7 +18,12 @@ export function TreeNode({
   selectedPath,
   onSelectFile,
 }: TreeNodeProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  // Auto-expand directories that contain the currently selected file so the
+  // user isn't greeted by a collapsed tree hiding their open file.
+  const shouldStartOpen = selectedPath
+    ? selectedPath.startsWith(`${node.path}/`)
+    : false;
+  const [isOpen, setIsOpen] = useState(shouldStartOpen);
   const indentPx = 8 + depth * 12;
 
   if (node.isDirectory) {
