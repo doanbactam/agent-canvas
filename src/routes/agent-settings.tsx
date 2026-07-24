@@ -14,7 +14,10 @@ import { useAcpCredentialForm } from "#/hooks/use-acp-credential-form";
 import { BrandButton } from "#/components/features/settings/brand-button";
 import { Typography } from "#/ui/typography";
 import { I18nKey } from "#/i18n/declaration";
-import { formControlSwitchDescriptionClassName } from "#/utils/form-control-classes";
+import {
+  formControlMultilineFieldClassName,
+  formControlSwitchDescriptionClassName,
+} from "#/utils/form-control-classes";
 import { cn } from "#/utils/utils";
 import { SettingsFieldSchema, SettingsValue } from "#/types/settings";
 import {
@@ -577,13 +580,11 @@ export function AgentSettingsScreen({
       className="flex flex-col gap-6 pb-8 max-w-2xl"
     >
       {!embedded && (
-        <div>
-          <Typography.H2 className="mb-2">
-            {t(I18nKey.SETTINGS$NAV_AGENT)}
-          </Typography.H2>
-          <Typography.Paragraph className="text-sm text-[#A3A3A3]">
+        <div className="space-y-1">
+          <Typography.H2>{t(I18nKey.SETTINGS$NAV_AGENT)}</Typography.H2>
+          <p className="text-sm leading-5 text-tertiary-light">
             {t(I18nKey.SETTINGS$AGENT_PAGE_DESCRIPTION)}
-          </Typography.Paragraph>
+          </p>
         </div>
       )}
 
@@ -696,7 +697,10 @@ export function AgentSettingsScreen({
             </Typography.Text>
             <textarea
               data-testid="agent-command-input"
-              className="bg-tertiary border border-[#717888] rounded-sm p-2 text-sm font-mono text-white placeholder:text-[#717888] min-h-[60px] resize-y focus:outline-none focus:border-white"
+              className={cn(
+                formControlMultilineFieldClassName,
+                "min-h-[60px] resize-y font-mono",
+              )}
               value={commandText}
               placeholder={commandPlaceholder}
               onChange={(e) => {
@@ -721,7 +725,7 @@ export function AgentSettingsScreen({
                 setIsDirty(true);
               }}
             />
-            <Typography.Text className="text-xs text-[#717888]">
+            <Typography.Text className="text-xs text-tertiary-alt">
               {t(I18nKey.SETTINGS$AGENT_COMMAND_HINT)}
             </Typography.Text>
           </div>
@@ -775,7 +779,7 @@ export function AgentSettingsScreen({
                 }}
               />
             )}
-            <Typography.Text className="text-xs text-[#717888]">
+            <Typography.Text className="text-xs text-tertiary-alt">
               {t(I18nKey.SETTINGS$AGENT_MODEL_HINT)}
             </Typography.Text>
           </div>
@@ -784,7 +788,7 @@ export function AgentSettingsScreen({
 
       {isAcp && selectedPreset !== ACP_CUSTOM_PRESET_KEY && (
         <>
-          <hr className="border-[#3D4046]" />
+          <hr className="border-subtle" />
           <AcpCredentialsSection
             form={acpCredentialForm}
             providerKey={selectedPreset}

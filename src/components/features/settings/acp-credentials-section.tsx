@@ -36,7 +36,7 @@ export function AcpCredentialsSection({
         <Typography.Text className="text-sm font-medium text-white">
           {t(I18nKey.SETTINGS$ACP_CREDENTIALS_TITLE)}
         </Typography.Text>
-        <Typography.Text className="text-xs text-[#717888]">
+        <Typography.Text className="text-xs text-tertiary-alt">
           {t(I18nKey.SETTINGS$ACP_CREDENTIALS_DESCRIPTION)}
         </Typography.Text>
       </div>

@@ -1,10 +1,10 @@
+import { useMemo } from "react";
 import { useConfig } from "#/hooks/query/use-config";
 import { useSettings } from "#/hooks/query/use-settings";
 import { OSS_NAV_ITEMS, SettingsNavItem } from "#/constants/settings-nav";
 import { ACP_PROVIDERS } from "#/constants/acp-providers";
 import { isSettingsPageHidden } from "#/utils/settings-utils";
 import { I18nKey } from "#/i18n/declaration";
-import { useActiveBackend } from "#/contexts/active-backend-context";
 import { useActiveAgentProfile } from "#/hooks/use-active-agent-profile";
 
 export type SettingsNavRenderedItem =
@@ -20,7 +20,6 @@ export type SettingsNavRenderedItem =
 export function useSettingsNavItems(): SettingsNavRenderedItem[] {
   const { data: config } = useConfig();
   const { data: settings } = useSettings();
-  const { backend } = useActiveBackend();
   const featureFlags = config?.feature_flags;
 
   // The active AgentProfile is the source of truth for the current agent kind
@@ -47,36 +46,21 @@ export function useSettingsNavItems(): SettingsNavRenderedItem[] {
   // Agent profiles are available on both local and cloud backends — the cloud
   // enterprise app-server exposes the same `/api/agent-profiles` surface
   // (OpenHands #15060, epic #3730), so the nav item is no longer local-gated.
-  return OSS_NAV_ITEMS.filter(
-    (item) => !isSettingsPageHidden(item.to, featureFlags),
-  ).map((item) => {
-    // Local backends present "LLM Profiles" as the section name + subtitle
-    // for the ``/settings`` entry; cloud backends keep the canonical "LLM".
-    // Apply the rename before the ACP disable check so the disabled tooltip
-    // still names the visible label, not a stale one.
-    const renamedItem =
-      item.to === "/settings"
-        ? {
-            ...item,
-            text:
-              backend.kind === "local"
-                ? I18nKey.SETTINGS$LLM_PROFILES
-                : item.text,
-            subtitle:
-              backend.kind === "local"
-                ? I18nKey.SETTINGS$PAGE_LLM_PROFILES_SUBLINE
-                : item.subtitle,
-          }
-        : item;
-
-    if (isAcpAgent && item.disabledByAcp) {
-      return {
-        type: "item",
-        item: renamedItem,
-        disabled: true,
-        disabledAgentName: acpServerName,
-      };
-    }
-    return { type: "item", item: renamedItem };
-  });
+  return useMemo(
+    () =>
+      OSS_NAV_ITEMS.filter(
+        (item) => !isSettingsPageHidden(item.to, featureFlags),
+      ).map((item) => {
+        if (isAcpAgent && item.disabledByAcp) {
+          return {
+            type: "item",
+            item,
+            disabled: true,
+            disabledAgentName: acpServerName,
+          };
+        }
+        return { type: "item", item };
+      }),
+    [featureFlags, isAcpAgent, acpServerName],
+  );
 }
