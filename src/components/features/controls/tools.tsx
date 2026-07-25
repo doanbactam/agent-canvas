@@ -11,22 +11,26 @@ import { useActiveConversation } from "#/hooks/query/use-active-conversation";
 import { cn } from "#/utils/utils";
 
 const SystemMessageModal = React.lazy(() =>
-  import("../conversation-panel/system-message-modal").then((m) => ({
-    default: m.SystemMessageModal,
-  })),
+  import("#/components/features/conversation-panel/system-message-modal").then(
+    (m) => ({
+      default: m.SystemMessageModal,
+    }),
+  ),
 );
 const SkillsModal = React.lazy(() =>
-  import("../conversation-panel/skills-modal").then((m) => ({
+  import("#/components/features/conversation-panel/skills-modal").then((m) => ({
     default: m.SkillsModal,
   })),
 );
 const PluginsModal = React.lazy(() =>
-  import("../conversation-panel/plugins-modal").then((m) => ({
-    default: m.PluginsModal,
-  })),
+  import("#/components/features/conversation-panel/plugins-modal").then(
+    (m) => ({
+      default: m.PluginsModal,
+    }),
+  ),
 );
 const HooksModal = React.lazy(() =>
-  import("../conversation-panel/hooks-modal").then((m) => ({
+  import("#/components/features/conversation-panel/hooks-modal").then((m) => ({
     default: m.HooksModal,
   })),
 );

@@ -230,18 +230,16 @@ export function ConversationName() {
         )}
       </div>
 
-      {/* Metrics Modal */}
-      {metricsModalVisible && (
-        <React.Suspense fallback={null}>
+      <React.Suspense fallback={null}>
+        {/* Metrics Modal */}
+        {metricsModalVisible && (
           <MetricsModal
             isOpen={metricsModalVisible}
             onOpenChange={setMetricsModalVisible}
           />
-        </React.Suspense>
-      )}
+        )}
 
-      {transcriptExportModalVisible && conversationId && (
-        <React.Suspense fallback={null}>
+        {transcriptExportModalVisible && conversationId && (
           <TranscriptExportModal
             conversationId={conversationId}
             conversationUrl={conversation.conversation_url}
@@ -250,10 +248,8 @@ export function ConversationName() {
             model={conversation.llm_model}
             onClose={() => setTranscriptExportModalVisible(false)}
           />
-        </React.Suspense>
-      )}
+        )}
 
-      <React.Suspense fallback={null}>
         {/* System Message Modal */}
         {systemModalVisible && (
           <SystemMessageModal
