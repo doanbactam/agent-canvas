@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import FileIcon from "#/icons/file.svg?react";
 import FolderIcon from "#/icons/folder.svg?react";
@@ -18,7 +18,21 @@ export function TreeNode({
   selectedPath,
   onSelectFile,
 }: TreeNodeProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  // Auto-expand directories that contain the currently selected file so the
+  // user isn't greeted by a collapsed tree hiding their open file.
+  const shouldStartOpen = selectedPath
+    ? selectedPath.startsWith(`${node.path}/`)
+    : false;
+  const [isOpen, setIsOpen] = useState(shouldStartOpen);
+
+  // If the user selects a file inside a different collapsed directory after
+  // mount, expand that directory so the selected file stays visible.
+  useEffect(() => {
+    if (shouldStartOpen) {
+      setIsOpen(true);
+    }
+  }, [shouldStartOpen]);
+
   const indentPx = 8 + depth * 12;
 
   if (node.isDirectory) {
@@ -30,7 +44,7 @@ export function TreeNode({
           aria-expanded={isOpen}
           data-testid={`file-tree-dir-${node.path}`}
           className={cn(
-            "flex w-full items-center gap-1.5 py-1 pr-2 text-left text-sm text-white",
+            "flex w-full items-center gap-1.5 py-1 pr-2 text-left text-sm text-foreground",
             "hover:bg-tertiary cursor-pointer",
           )}
           // per-row indentation computed from tree depth at runtime
@@ -39,7 +53,7 @@ export function TreeNode({
           <span
             aria-hidden
             className={cn(
-              "inline-block w-3 text-[10px] text-[var(--oh-muted)] transition-transform",
+              "inline-block w-3 text-[10px] text-muted transition-transform",
               isOpen ? "rotate-90" : "rotate-0",
             )}
           >
@@ -76,8 +90,8 @@ export function TreeNode({
           "flex w-full items-center gap-1.5 py-1 pr-2 text-left text-sm",
           "hover:bg-tertiary cursor-pointer",
           isSelected
-            ? "bg-[var(--oh-interactive-hover)] text-white"
-            : "text-[var(--oh-text-tertiary)]",
+            ? "bg-[var(--oh-interactive-hover)] text-foreground"
+            : "text-text-tertiary",
         )}
         // per-row indentation computed from tree depth at runtime
         style={{ paddingLeft: `${indentPx + 16}px` }}

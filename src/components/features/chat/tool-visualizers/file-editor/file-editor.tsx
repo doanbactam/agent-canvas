@@ -1,5 +1,5 @@
 import React from "react";
-import { getLanguageFromPath } from "#/utils/get-language-from-path";
+import { getShikiLanguageForFile } from "#/utils/file-language";
 import { defineVisualizer } from "../define";
 import { textFromContent } from "../text-content";
 import { CodeBlock } from "../primitives/code-block";
@@ -20,7 +20,7 @@ export const fileEditorVisualizer = defineVisualizer({
   Body: function FileEditorBody({ action, observation }) {
     const path = observation?.observation.path ?? action?.action.path ?? "";
     const command = observation?.observation.command ?? action?.action.command;
-    const language = getLanguageFromPath(path);
+    const language = getShikiLanguageForFile(path) ?? undefined;
 
     const viewRange = action?.action.view_range;
     const range =

@@ -10,23 +10,13 @@ import {
   useWorkspaceSession,
 } from "#/hooks/query/use-workspace-session";
 import { useWorkspaceMutationCounter } from "#/stores/use-workspace-mutation-counter";
+import {
+  type WorkspaceFileKind,
+  classifyFileKind,
+  guessMimeType,
+} from "#/utils/file-type";
 
-// Magic-number sniff for common binary formats we can render via iframe.
-const IMAGE_EXTENSIONS = new Set([
-  "png",
-  "jpg",
-  "jpeg",
-  "gif",
-  "webp",
-  "bmp",
-  "ico",
-  "svg",
-  "avif",
-]);
-
-const PDF_EXTENSIONS = new Set(["pdf"]);
-
-export type WorkspaceFileKind = "text" | "image" | "pdf" | "binary";
+export type { WorkspaceFileKind } from "#/utils/file-type";
 
 export interface WorkspaceFileContent {
   path: string;
@@ -44,62 +34,6 @@ export interface WorkspaceFileContent {
   staticUrl: string;
   /** MIME type guessed from the file extension. */
   mimeType: string;
-}
-
-function getExtension(path: string): string {
-  const idx = path.lastIndexOf(".");
-  if (idx === -1) return "";
-  return path.slice(idx + 1).toLowerCase();
-}
-
-function guessMimeType(path: string): string {
-  const ext = getExtension(path);
-  switch (ext) {
-    case "html":
-    case "htm":
-      return "text/html";
-    case "css":
-      return "text/css";
-    case "js":
-    case "mjs":
-    case "cjs":
-      return "text/javascript";
-    case "json":
-      return "application/json";
-    case "md":
-    case "markdown":
-      return "text/markdown";
-    case "svg":
-      return "image/svg+xml";
-    case "png":
-      return "image/png";
-    case "jpg":
-    case "jpeg":
-      return "image/jpeg";
-    case "gif":
-      return "image/gif";
-    case "webp":
-      return "image/webp";
-    case "bmp":
-      return "image/bmp";
-    case "ico":
-      return "image/x-icon";
-    case "avif":
-      return "image/avif";
-    case "pdf":
-      return "application/pdf";
-    default:
-      return "text/plain";
-  }
-}
-
-function classifyKind(path: string): WorkspaceFileKind {
-  const ext = getExtension(path);
-  if (IMAGE_EXTENSIONS.has(ext)) return "image";
-  if (PDF_EXTENSIONS.has(ext)) return "pdf";
-  // Everything else is treated as text and decoded; if decoding produces
-  // null bytes we fall back to "binary" downstream.
-  return "text";
 }
 
 function isLikelyBinary(buffer: ArrayBuffer): boolean {
@@ -186,7 +120,7 @@ export function useWorkspaceFileContent(relativePath: string | null) {
     queryFn: async () => {
       if (!relativePath) throw new Error("No path");
 
-      const kind = classifyKind(relativePath);
+      const kind = classifyFileKind(relativePath);
       const mimeType = guessMimeType(relativePath);
 
       if (isCloud) {

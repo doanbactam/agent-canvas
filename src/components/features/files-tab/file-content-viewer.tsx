@@ -7,32 +7,18 @@ import {
   withWorkspaceCacheBuster,
 } from "#/stores/use-workspace-mutation-counter";
 import { MarkdownRenderer } from "#/components/features/markdown/markdown-renderer";
+import {
+  getFileExtension,
+  getOfficeDocumentLabel,
+  isHtmlLikeExtension,
+  isMarkdownExtension,
+} from "#/utils/file-type";
 import { HighlightedSourceView } from "./highlighted-source-view";
 import type { ViewMode } from "./view-mode";
 
 interface FileContentViewerProps {
   path: string;
   viewMode: ViewMode;
-}
-
-const HTML_LIKE_EXTS = new Set(["html", "htm", "svg"]);
-const MARKDOWN_EXTS = new Set(["md", "markdown", "mdx"]);
-
-// Office/document formats we can't preview inline. The label doubles as the
-// allow-list (a present entry => Office doc) and feeds a clear, format-named
-// "no preview" message instead of the generic binary fallback.
-const OFFICE_DOCUMENT_LABELS: Record<string, string> = {
-  pptx: "PowerPoint",
-  ppt: "PowerPoint",
-  docx: "Word",
-  doc: "Word",
-  xlsx: "Excel",
-  xls: "Excel",
-};
-
-function getExtension(path: string): string {
-  const idx = path.lastIndexOf(".");
-  return idx === -1 ? "" : path.slice(idx + 1).toLowerCase();
 }
 
 /**
@@ -42,7 +28,7 @@ function getExtension(path: string): string {
  */
 function UnpreviewableFallback({ path }: { path: string }) {
   const { t } = useTranslation("openhands");
-  const documentLabel = OFFICE_DOCUMENT_LABELS[getExtension(path)];
+  const documentLabel = getOfficeDocumentLabel(getFileExtension(path));
   return (
     <div
       className="flex h-full w-full items-center justify-center text-sm text-[var(--oh-muted)]"
@@ -162,7 +148,7 @@ export function FileContentViewer({ path, viewMode }: FileContentViewerProps) {
   }
 
   // Text-like content.
-  if (mimeType === "text/html" || HTML_LIKE_EXTS.has(getExtension(path))) {
+  if (mimeType === "text/html" || isHtmlLikeExtension(getFileExtension(path))) {
     // Sandbox the preview iframe: `allow-same-origin` keeps the frame on
     // the workspace fileserver's origin so relative `<link href="…">`,
     // `<img src="…">`, etc. continue to resolve, while the absence of
@@ -181,21 +167,19 @@ export function FileContentViewer({ path, viewMode }: FileContentViewerProps) {
     );
   }
 
-  if (kind === "text" && MARKDOWN_EXTS.has(getExtension(path))) {
+  if (kind === "text" && isMarkdownExtension(getFileExtension(path))) {
     // Match the right-pane chrome color so the rich-rendered markdown
     // blends with the surrounding files tab instead of painting a stark
     // white card. We use `prose-invert` (typography plugin's dark-theme
     // variant) and then layer arbitrary CSS-variable overrides on top to
-    // pin body / bold / quote text to pure white — the user specifically
-    // asked for every text element (not just headings) to read as white.
-    // The custom heading components in `markdown/headings.tsx` already
-    // hard-code `text-white`, so headers stay white through this change.
+    // pin body / bold / quote text to the current foreground color so the
+    // preview respects the active theme.
     return (
       <div
         data-testid="file-content-viewer-markdown"
-        className="h-full w-full overflow-auto bg-[var(--oh-surface)] text-white custom-scrollbar-always"
+        className="h-full w-full overflow-auto bg-[var(--oh-surface)] text-foreground custom-scrollbar-always"
       >
-        <div className="prose prose-sm prose-invert max-w-none p-6 [--tw-prose-body:#fff] [--tw-prose-bold:#fff] [--tw-prose-headings:#fff] [--tw-prose-lead:#fff] [--tw-prose-counters:#fff] [--tw-prose-quotes:#fff] [--tw-prose-quote-borders:var(--oh-border-subtle)] [--tw-prose-bullets:var(--oh-muted)] [--tw-prose-hr:var(--oh-border-subtle)] [--tw-prose-captions:var(--oh-muted)] [--tw-prose-kbd:#fff]">
+        <div className="prose prose-sm prose-invert max-w-none p-6 [--tw-prose-body:var(--oh-foreground)] [--tw-prose-bold:var(--oh-foreground)] [--tw-prose-headings:var(--oh-foreground)] [--tw-prose-lead:var(--oh-foreground)] [--tw-prose-counters:var(--oh-foreground)] [--tw-prose-quotes:var(--oh-foreground)] [--tw-prose-quote-borders:var(--oh-border-subtle)] [--tw-prose-bullets:var(--oh-muted)] [--tw-prose-hr:var(--oh-border-subtle)] [--tw-prose-captions:var(--oh-muted)] [--tw-prose-kbd:var(--oh-foreground)]">
           <MarkdownRenderer
             content={text ?? ""}
             includeStandard
