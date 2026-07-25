@@ -36,7 +36,13 @@ function getAgentOptionIcon(id: string): AgentBrandIconKind {
   );
 }
 
-export function AgentOptionIcon({ id, muted }: { id: string; muted: boolean }) {
+export const AgentOptionIcon = React.memo(function AgentOptionIcon({
+  id,
+  muted,
+}: {
+  id: string;
+  muted: boolean;
+}) {
   const icon = getAgentOptionIcon(id);
 
   // The OpenHands wordmark is wider than the square brand marks (24×16 vs
@@ -47,7 +53,7 @@ export function AgentOptionIcon({ id, muted }: { id: string; muted: boolean }) {
       <AgentBrandIcon
         kind="openhands"
         size={16}
-        className={cn("text-white", muted && "opacity-55")}
+        className={cn("text-foreground", muted && "opacity-55")}
         data-testid="onboarding-agent-icon-openhands"
       />
     );
@@ -57,11 +63,11 @@ export function AgentOptionIcon({ id, muted }: { id: string; muted: boolean }) {
     <AgentBrandIcon
       kind={icon}
       size={18}
-      className={muted ? "text-[var(--oh-muted)]" : "text-white"}
+      className={muted ? "text-muted" : "text-foreground"}
       data-testid={`onboarding-agent-icon-${icon}`}
     />
   );
-}
+});
 
 interface AgentOption {
   id: OnboardingAgentId;
@@ -103,6 +109,7 @@ export function ChooseAgentStep({
 }: ChooseAgentStepProps) {
   const { t } = useTranslation("openhands");
   const { mutate: saveSettings, isPending: isSaving } = useSaveSettings();
+  const agentOptions = React.useMemo(() => getAgentOptions(), []);
 
   const handleNext = () => {
     // The diff builder seeds the preferred default model (Vertex-safe for
@@ -137,10 +144,10 @@ export function ChooseAgentStep({
       className="flex flex-col gap-6"
     >
       <header className="flex flex-col gap-2">
-        <h2 className="text-2xl font-medium text-white">
+        <h2 className="text-2xl font-medium text-foreground">
           {t(I18nKey.ONBOARDING$AGENT_TITLE)}
         </h2>
-        <p className="text-sm text-[var(--oh-muted)]">
+        <p className="text-sm text-muted">
           {t(I18nKey.ONBOARDING$AGENT_SUBTITLE)}
         </p>
       </header>
@@ -150,7 +157,7 @@ export function ChooseAgentStep({
         aria-label={t(I18nKey.ONBOARDING$AGENT_TITLE)}
         className="flex flex-col gap-3"
       >
-        {getAgentOptions().map((option) => {
+        {agentOptions.map((option) => {
           const isSelected = option.id === selectedAgentId;
           return (
             <button
@@ -164,18 +171,18 @@ export function ChooseAgentStep({
               className={cn(
                 "flex items-start justify-between gap-4 rounded-xl border px-4 py-3 text-left transition-colors cursor-pointer",
                 isSelected
-                  ? "border-white/45 bg-white/[0.09] shadow-none hover:border-white/45 hover:bg-white/[0.09]"
-                  : "border-white/30 bg-white/5 hover:border-white/40 hover:bg-white/[0.08]",
+                  ? "border-foreground/45 bg-foreground/[0.09] shadow-none hover:border-foreground/45 hover:bg-foreground/[0.09]"
+                  : "border-foreground/30 bg-foreground/5 hover:border-foreground/40 hover:bg-foreground/[0.08]",
               )}
             >
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <div className="flex min-w-0 items-center gap-2">
                   <AgentOptionIcon id={option.id} muted={false} />
-                  <span className="truncate text-base font-normal text-white">
+                  <span className="truncate text-base font-normal text-foreground">
                     {option.label}
                   </span>
                 </div>
-                <span className="text-xs text-[var(--oh-muted)]">
+                <span className="text-xs text-muted">
                   {t(option.descriptionKey)}
                 </span>
               </div>
@@ -184,7 +191,7 @@ export function ChooseAgentStep({
                   <Check
                     width={18}
                     height={18}
-                    className="mt-1 shrink-0 text-white"
+                    className="mt-1 shrink-0 text-foreground"
                     aria-hidden
                   />
                 ) : null}

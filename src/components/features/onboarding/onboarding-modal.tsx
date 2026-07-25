@@ -269,15 +269,15 @@ export function OnboardingModal({
   // Onboarding Completed — `onLaunched` runs only after a conversation is
   // successfully created (the hello message or a recommended automation), so
   // wrapping it captures completion exactly once before the modal closes.
-  const handleCompleted = () => {
+  const handleCompleted = React.useCallback(() => {
     trackOnboardingCompleted({ agent: selectedAgentId });
     onClose();
-  };
+  }, [trackOnboardingCompleted, selectedAgentId, onClose]);
 
   // Onboarding Skipped/Dismissed — the user exited before completing, via the
   // skip button (non-final steps) or the final-step Close button. `currentPhase`
   // records where they left, which also distinguishes the two affordances.
-  const handleSkipOrDismiss = () => {
+  const handleSkipOrDismiss = React.useCallback(() => {
     trackOnboardingSkipped({
       step: currentPhase,
       stepIndex: currentStep,
@@ -285,7 +285,14 @@ export function OnboardingModal({
       agent: selectedAgentId,
     });
     onClose();
-  };
+  }, [
+    trackOnboardingSkipped,
+    currentPhase,
+    currentStep,
+    totalSteps,
+    selectedAgentId,
+    onClose,
+  ]);
 
   return (
     // No `onClose`: the flow must only be dismissed via explicit actions
@@ -298,7 +305,7 @@ export function OnboardingModal({
           data-current-step={currentStep}
           data-preview={isPreview ? "true" : undefined}
           className={cn(
-            "flex flex-col gap-6 overflow-hidden rounded-2xl border border-white/10 bg-base-secondary shadow-2xl",
+            "flex flex-col gap-6 overflow-hidden rounded-2xl border border-foreground/10 bg-base-secondary shadow-2xl",
             modalWidthClassName("lg"),
             MODAL_MAX_WIDTH_VIEWPORT,
             "max-h-[90vh]",
@@ -373,7 +380,7 @@ export function OnboardingModal({
             type="button"
             data-testid="onboarding-skip"
             onClick={handleSkipOrDismiss}
-            className="rounded-md px-3 py-2 text-sm text-[var(--oh-muted)] transition-colors hover:bg-white/5 hover:text-white cursor-pointer"
+            className="rounded-md px-3 py-2 text-sm text-muted transition-colors hover:bg-foreground/5 hover:text-foreground cursor-pointer"
           >
             {t(I18nKey.ONBOARDING$SKIP)}
           </button>
