@@ -1,3 +1,4 @@
+import { useMemo, memo } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "#/utils/utils";
 import { Typography } from "#/ui/typography";
@@ -18,13 +19,17 @@ interface SettingsDesktopSidebarProps {
  * {@link ExtensionsNavigation}). Mobile drawer stays `position: fixed` outside
  * this row in the layout.
  */
-export function SettingsDesktopSidebar({
+function SettingsDesktopSidebarImpl({
   navigationItems,
 }: SettingsDesktopSidebarProps) {
   const { t } = useTranslation("openhands");
-  const desktopNavItems = navigationItems.filter(
-    (item): item is Extract<SettingsNavRenderedItem, { type: "item" }> =>
-      item.type === "item",
+  const desktopNavItems = useMemo(
+    () =>
+      navigationItems.filter(
+        (item): item is Extract<SettingsNavRenderedItem, { type: "item" }> =>
+          item.type === "item",
+      ),
+    [navigationItems],
   );
 
   return (
@@ -35,7 +40,7 @@ export function SettingsDesktopSidebar({
         "md:sticky md:top-8 md:self-start md:pl-8",
       )}
     >
-      <Typography.Text className="px-2 text-sm font-normal text-white">
+      <Typography.Text className="px-2 text-sm font-normal text-foreground">
         {t(I18nKey.SETTINGS$TITLE)}
       </Typography.Text>
       <div className="flex flex-col gap-0.5 pt-0.5">
@@ -76,3 +81,5 @@ export function SettingsDesktopSidebar({
     </aside>
   );
 }
+
+export const SettingsDesktopSidebar = memo(SettingsDesktopSidebarImpl);

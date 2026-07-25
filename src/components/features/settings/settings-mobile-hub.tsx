@@ -27,16 +27,28 @@ export function SettingsMobileHub({ navigationItems }: SettingsMobileHubProps) {
     >
       <Typography.H2>{t(I18nKey.SETTINGS$TITLE)}</Typography.H2>
       <nav className="flex flex-col gap-0.5">
-        {navItems.map((renderedItem) => (
-          <SidebarNavLink
-            key={renderedItem.item.to}
-            to={renderedItem.item.to}
-            label={t(renderedItem.item.text as I18nKey)}
-            end
-            testId={`sidebar-settings-${renderedItem.item.to}`}
-            icon={renderedItem.item.icon}
-          />
-        ))}
+        {navItems.map((renderedItem) => {
+          const disabled = renderedItem.disabled;
+          const disabledReason =
+            renderedItem.disabled && renderedItem.disabledAgentName
+              ? t(I18nKey.SETTINGS$AGENT_DISABLED_TOOLTIP, {
+                  agentName: renderedItem.disabledAgentName,
+                })
+              : undefined;
+
+          return (
+            <SidebarNavLink
+              key={renderedItem.item.to}
+              to={renderedItem.item.to}
+              label={t(renderedItem.item.text as I18nKey)}
+              end
+              testId={`sidebar-settings-${renderedItem.item.to}`}
+              icon={renderedItem.item.icon}
+              disabled={disabled}
+              disabledReason={disabledReason}
+            />
+          );
+        })}
         <IntegrationsSettingsLink />
         <CloudSettingsLink />
       </nav>
