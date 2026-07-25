@@ -8,13 +8,35 @@ import { displaySuccessToast } from "#/utils/custom-toast-handlers";
 import { I18nKey } from "#/i18n/declaration";
 import { EllipsisButton } from "../conversation-panel/ellipsis-button";
 import { ConversationNameContextMenu } from "./conversation-name-context-menu";
-import { SystemMessageModal } from "../conversation-panel/system-message-modal";
-import { SkillsModal } from "../conversation-panel/skills-modal";
-import { HooksModal } from "../conversation-panel/hooks-modal";
 import { ConfirmDeleteModal } from "../conversation-panel/confirm-delete-modal";
 import { ConfirmStopModal } from "../conversation-panel/confirm-stop-modal";
-import { MetricsModal } from "./metrics-modal/metrics-modal";
-import { TranscriptExportModal } from "./transcript-export-modal";
+
+const SystemMessageModal = React.lazy(() =>
+  import("../conversation-panel/system-message-modal").then((m) => ({
+    default: m.SystemMessageModal,
+  })),
+);
+const SkillsModal = React.lazy(() =>
+  import("../conversation-panel/skills-modal").then((m) => ({
+    default: m.SkillsModal,
+  })),
+);
+const HooksModal = React.lazy(() =>
+  import("../conversation-panel/hooks-modal").then((m) => ({
+    default: m.HooksModal,
+  })),
+);
+const MetricsModal = React.lazy(() =>
+  import("./metrics-modal/metrics-modal").then((m) => ({
+    default: m.MetricsModal,
+  })),
+);
+
+const TranscriptExportModal = React.lazy(() =>
+  import("./transcript-export-modal").then((m) => ({
+    default: m.TranscriptExportModal,
+  })),
+);
 
 export function ConversationName() {
   const { t } = useTranslation("openhands");
@@ -208,55 +230,61 @@ export function ConversationName() {
         )}
       </div>
 
-      {/* Metrics Modal */}
-      <MetricsModal
-        isOpen={metricsModalVisible}
-        onOpenChange={setMetricsModalVisible}
-      />
+      <React.Suspense fallback={null}>
+        {/* Metrics Modal */}
+        {metricsModalVisible && (
+          <MetricsModal
+            isOpen={metricsModalVisible}
+            onOpenChange={setMetricsModalVisible}
+          />
+        )}
 
-      {transcriptExportModalVisible && conversationId && (
-        <TranscriptExportModal
-          conversationId={conversationId}
-          conversationUrl={conversation.conversation_url}
-          sessionApiKey={conversation.session_api_key}
-          conversationTitle={conversation.title}
-          model={conversation.llm_model}
-          onClose={() => setTranscriptExportModalVisible(false)}
-        />
-      )}
+        {transcriptExportModalVisible && conversationId && (
+          <TranscriptExportModal
+            conversationId={conversationId}
+            conversationUrl={conversation.conversation_url}
+            sessionApiKey={conversation.session_api_key}
+            conversationTitle={conversation.title}
+            model={conversation.llm_model}
+            onClose={() => setTranscriptExportModalVisible(false)}
+          />
+        )}
 
-      {/* System Message Modal */}
-      <SystemMessageModal
-        isOpen={systemModalVisible}
-        onClose={() => setSystemModalVisible(false)}
-        systemMessage={systemMessage || null}
-      />
+        {/* System Message Modal */}
+        {systemModalVisible && (
+          <SystemMessageModal
+            isOpen={systemModalVisible}
+            onClose={() => setSystemModalVisible(false)}
+            systemMessage={systemMessage || null}
+          />
+        )}
 
-      {/* Skills Modal */}
-      {skillsModalVisible && (
-        <SkillsModal onClose={() => setSkillsModalVisible(false)} />
-      )}
+        {/* Skills Modal */}
+        {skillsModalVisible && (
+          <SkillsModal onClose={() => setSkillsModalVisible(false)} />
+        )}
 
-      {/* Hooks Modal */}
-      {hooksModalVisible && (
-        <HooksModal onClose={() => setHooksModalVisible(false)} />
-      )}
+        {/* Hooks Modal */}
+        {hooksModalVisible && (
+          <HooksModal onClose={() => setHooksModalVisible(false)} />
+        )}
 
-      {/* Confirm Delete Modal */}
-      {confirmDeleteModalVisible && (
-        <ConfirmDeleteModal
-          onConfirm={handleConfirmDelete}
-          onCancel={() => setConfirmDeleteModalVisible(false)}
-          conversationTitle={conversation?.title || ""}
-        />
-      )}
+        {/* Confirm Delete Modal */}
+        {confirmDeleteModalVisible && (
+          <ConfirmDeleteModal
+            onConfirm={handleConfirmDelete}
+            onCancel={() => setConfirmDeleteModalVisible(false)}
+            conversationTitle={conversation?.title || ""}
+          />
+        )}
 
-      {confirmStopModalVisible && (
-        <ConfirmStopModal
-          onConfirm={handleConfirmStop}
-          onCancel={() => setConfirmStopModalVisible(false)}
-        />
-      )}
+        {confirmStopModalVisible && (
+          <ConfirmStopModal
+            onConfirm={handleConfirmStop}
+            onCancel={() => setConfirmStopModalVisible(false)}
+          />
+        )}
+      </React.Suspense>
     </>
   );
 }

@@ -11,7 +11,6 @@ import { useUnifiedPauseConversation } from "#/hooks/mutation/use-unified-stop-c
 import { ConfirmDeleteModal } from "./confirm-delete-modal";
 import { ConfirmStopModal } from "./confirm-stop-modal";
 import { NavigationLink } from "#/components/shared/navigation-link";
-import { ExitConversationModal } from "./exit-conversation-modal";
 import { useClickOutsideElement } from "#/hooks/use-click-outside-element";
 import { Provider } from "#/types/settings";
 import { useUpdateConversation } from "#/hooks/mutation/use-update-conversation";
@@ -42,6 +41,12 @@ import {
   type ConversationGroupLaunch,
 } from "./conversation-panel-list-helpers";
 import { usePinnedConversationsStore } from "#/stores/pinned-conversations-store";
+
+const ExitConversationModal = React.lazy(() =>
+  import("./exit-conversation-modal").then((m) => ({
+    default: m.ExitConversationModal,
+  })),
+);
 
 interface ConversationPanelProps {
   onClose?: () => void;
@@ -889,54 +894,56 @@ export function ConversationPanel({
           ))}
       </div>
 
-      {confirmDeleteModalVisible && (
-        <ConfirmDeleteModal
-          onConfirm={() => {
-            handleConfirmDelete();
-            setConfirmDeleteModalVisible(false);
-            setSelectedConversationTitle(null);
-          }}
-          onCancel={() => {
-            setConfirmDeleteModalVisible(false);
-            setSelectedConversationTitle(null);
-          }}
-          conversationTitle={selectedConversationTitle ?? undefined}
-        />
-      )}
+      <React.Suspense fallback={null}>
+        {confirmDeleteModalVisible && (
+          <ConfirmDeleteModal
+            onConfirm={() => {
+              handleConfirmDelete();
+              setConfirmDeleteModalVisible(false);
+              setSelectedConversationTitle(null);
+            }}
+            onCancel={() => {
+              setConfirmDeleteModalVisible(false);
+              setSelectedConversationTitle(null);
+            }}
+            conversationTitle={selectedConversationTitle ?? undefined}
+          />
+        )}
 
-      {confirmDeleteAllVisible && (
-        <ConfirmDeleteModal
-          title={t(I18nKey.CONVERSATION$CONFIRM_DELETE_ALL_TITLE)}
-          description={t(I18nKey.CONVERSATION$CONFIRM_DELETE_ALL_DESC, {
-            count: conversations.length,
-          })}
-          onConfirm={async () => {
-            await handleConfirmDeleteAll();
-            setConfirmDeleteAllVisible(false);
-          }}
-          onCancel={() => setConfirmDeleteAllVisible(false)}
-        />
-      )}
+        {confirmDeleteAllVisible && (
+          <ConfirmDeleteModal
+            title={t(I18nKey.CONVERSATION$CONFIRM_DELETE_ALL_TITLE)}
+            description={t(I18nKey.CONVERSATION$CONFIRM_DELETE_ALL_DESC, {
+              count: conversations.length,
+            })}
+            onConfirm={async () => {
+              await handleConfirmDeleteAll();
+              setConfirmDeleteAllVisible(false);
+            }}
+            onCancel={() => setConfirmDeleteAllVisible(false)}
+          />
+        )}
 
-      {confirmStopModalVisible && (
-        <ConfirmStopModal
-          onConfirm={() => {
-            handleConfirmStop();
-            setConfirmStopModalVisible(false);
-          }}
-          onCancel={() => setConfirmStopModalVisible(false)}
-        />
-      )}
+        {confirmStopModalVisible && (
+          <ConfirmStopModal
+            onConfirm={() => {
+              handleConfirmStop();
+              setConfirmStopModalVisible(false);
+            }}
+            onCancel={() => setConfirmStopModalVisible(false)}
+          />
+        )}
 
-      {confirmExitConversationModalVisible && (
-        <ExitConversationModal
-          onConfirm={() => {
-            onClose?.();
-          }}
-          onClose={() => setConfirmExitConversationModalVisible(false)}
-          onCancel={() => setConfirmExitConversationModalVisible(false)}
-        />
-      )}
+        {confirmExitConversationModalVisible && (
+          <ExitConversationModal
+            onConfirm={() => {
+              onClose?.();
+            }}
+            onClose={() => setConfirmExitConversationModalVisible(false)}
+            onCancel={() => setConfirmExitConversationModalVisible(false)}
+          />
+        )}
+      </React.Suspense>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import {
+import React, {
   useState,
   useMemo,
   useCallback,
@@ -35,10 +35,7 @@ import { AutomationCardSkeleton } from "#/components/features/automations/automa
 import { EmptyState } from "#/components/features/automations/empty-state";
 import { ErrorState } from "#/components/features/automations/error-state";
 import { BackendNotConfigured } from "#/components/features/automations/backend-not-configured";
-import { DeleteConfirmationModal } from "#/components/features/automations/delete-confirmation-modal";
-import { EditAutomationModal } from "#/components/features/automations/detail/edit-automation-modal";
-import { AddAutomationModal } from "#/components/features/automations/add-automation-modal";
-import { ImportAutomationModal } from "#/components/features/automations/import-automation-modal";
+
 import { RecommendedAutomationsLauncher } from "#/components/features/automations/recommended-automations-launcher";
 import { BrandButton } from "#/components/features/settings/brand-button";
 import { useTracking } from "#/hooks/use-tracking";
@@ -49,6 +46,29 @@ import {
   serializeAutomation,
 } from "#/utils/automation-export";
 import { downloadBlob } from "#/utils/utils";
+
+const DeleteConfirmationModal = React.lazy(() =>
+  import("#/components/features/automations/delete-confirmation-modal").then(
+    (m) => ({ default: m.DeleteConfirmationModal }),
+  ),
+);
+const EditAutomationModal = React.lazy(() =>
+  import("#/components/features/automations/detail/edit-automation-modal").then(
+    (m) => ({ default: m.EditAutomationModal }),
+  ),
+);
+const AddAutomationModal = React.lazy(() =>
+  import("#/components/features/automations/add-automation-modal").then(
+    (m) => ({
+      default: m.AddAutomationModal,
+    }),
+  ),
+);
+const ImportAutomationModal = React.lazy(() =>
+  import("#/components/features/automations/import-automation-modal").then(
+    (m) => ({ default: m.ImportAutomationModal }),
+  ),
+);
 
 const PAGE_SIZE = 50;
 
@@ -383,35 +403,43 @@ export default function AutomationsList() {
           <RecommendedAutomationsLauncher query={searchQuery} />
         </div>
 
-        {/* Delete confirmation modal */}
-        <DeleteConfirmationModal
-          automationName={deleteTarget?.name ?? ""}
-          isOpen={deleteTarget !== null}
-          onConfirm={handleDeleteConfirm}
-          onCancel={() => setDeleteTarget(null)}
-        />
+        <React.Suspense fallback={null}>
+          {/* Delete confirmation modal */}
+          {deleteTarget && (
+            <DeleteConfirmationModal
+              automationName={deleteTarget.name}
+              isOpen={deleteTarget !== null}
+              onConfirm={handleDeleteConfirm}
+              onCancel={() => setDeleteTarget(null)}
+            />
+          )}
 
-        {/* Edit modal — local backends only */}
-        {editTarget && (
-          <EditAutomationModal
-            automation={editTarget}
-            isOpen={editTarget !== null}
-            onClose={() => setEditTarget(null)}
-          />
-        )}
+          {/* Edit modal — local backends only */}
+          {editTarget && (
+            <EditAutomationModal
+              automation={editTarget}
+              isOpen={editTarget !== null}
+              onClose={() => setEditTarget(null)}
+            />
+          )}
 
-        <AddAutomationModal
-          isOpen={isAddAutomationOpen}
-          onClose={() => setIsAddAutomationOpen(false)}
-        />
+          {isAddAutomationOpen && (
+            <AddAutomationModal
+              isOpen={isAddAutomationOpen}
+              onClose={() => setIsAddAutomationOpen(false)}
+            />
+          )}
 
-        <ImportAutomationModal
-          isOpen={importSpec !== null}
-          spec={importSpec}
-          isImporting={importMutation.isPending}
-          onClose={() => setImportSpec(null)}
-          onImport={handleImportConfirm}
-        />
+          {importSpec && (
+            <ImportAutomationModal
+              isOpen={importSpec !== null}
+              spec={importSpec}
+              isImporting={importMutation.isPending}
+              onClose={() => setImportSpec(null)}
+              onImport={handleImportConfirm}
+            />
+          )}
+        </React.Suspense>
       </div>
     </div>
   );

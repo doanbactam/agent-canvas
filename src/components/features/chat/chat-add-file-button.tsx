@@ -8,10 +8,28 @@ import { useOptionalConversationId } from "#/hooks/use-conversation-id";
 import { useActiveConversation } from "#/hooks/query/use-active-conversation";
 import { useConversationNameContextMenu } from "#/hooks/use-conversation-name-context-menu";
 import { ToolsContextMenu } from "#/components/features/controls/tools-context-menu";
-import { SystemMessageModal } from "#/components/features/conversation-panel/system-message-modal";
-import { SkillsModal } from "#/components/features/conversation-panel/skills-modal";
-import { PluginsModal } from "#/components/features/conversation-panel/plugins-modal";
-import { HooksModal } from "#/components/features/conversation-panel/hooks-modal";
+const SystemMessageModal = React.lazy(() =>
+  import("#/components/features/conversation-panel/system-message-modal").then(
+    (m) => ({ default: m.SystemMessageModal }),
+  ),
+);
+const SkillsModal = React.lazy(() =>
+  import("#/components/features/conversation-panel/skills-modal").then((m) => ({
+    default: m.SkillsModal,
+  })),
+);
+const PluginsModal = React.lazy(() =>
+  import("#/components/features/conversation-panel/plugins-modal").then(
+    (m) => ({
+      default: m.PluginsModal,
+    }),
+  ),
+);
+const HooksModal = React.lazy(() =>
+  import("#/components/features/conversation-panel/hooks-modal").then((m) => ({
+    default: m.HooksModal,
+  })),
+);
 
 export interface ChatAddFileButtonProps {
   handleFileIconClick: () => void;
@@ -107,20 +125,24 @@ export function ChatAddFileButton({
         />
       )}
 
-      <SystemMessageModal
-        isOpen={systemModalVisible}
-        onClose={() => setSystemModalVisible(false)}
-        systemMessage={systemMessage || null}
-      />
-      {skillsModalVisible && (
-        <SkillsModal onClose={() => setSkillsModalVisible(false)} />
-      )}
-      {pluginsModalVisible && (
-        <PluginsModal onClose={() => setPluginsModalVisible(false)} />
-      )}
-      {hooksModalVisible && (
-        <HooksModal onClose={() => setHooksModalVisible(false)} />
-      )}
+      <React.Suspense fallback={null}>
+        {systemModalVisible && (
+          <SystemMessageModal
+            isOpen={systemModalVisible}
+            onClose={() => setSystemModalVisible(false)}
+            systemMessage={systemMessage || null}
+          />
+        )}
+        {skillsModalVisible && (
+          <SkillsModal onClose={() => setSkillsModalVisible(false)} />
+        )}
+        {pluginsModalVisible && (
+          <PluginsModal onClose={() => setPluginsModalVisible(false)} />
+        )}
+        {hooksModalVisible && (
+          <HooksModal onClose={() => setHooksModalVisible(false)} />
+        )}
+      </React.Suspense>
     </div>
   );
 }

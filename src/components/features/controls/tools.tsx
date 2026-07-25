@@ -8,11 +8,32 @@ import { chatInputPillButtonClassName } from "#/utils/form-control-classes";
 import { ToolsContextMenu } from "./tools-context-menu";
 import { useConversationNameContextMenu } from "#/hooks/use-conversation-name-context-menu";
 import { useActiveConversation } from "#/hooks/query/use-active-conversation";
-import { SystemMessageModal } from "../conversation-panel/system-message-modal";
-import { SkillsModal } from "../conversation-panel/skills-modal";
-import { PluginsModal } from "../conversation-panel/plugins-modal";
-import { HooksModal } from "../conversation-panel/hooks-modal";
 import { cn } from "#/utils/utils";
+
+const SystemMessageModal = React.lazy(() =>
+  import("#/components/features/conversation-panel/system-message-modal").then(
+    (m) => ({
+      default: m.SystemMessageModal,
+    }),
+  ),
+);
+const SkillsModal = React.lazy(() =>
+  import("#/components/features/conversation-panel/skills-modal").then((m) => ({
+    default: m.SkillsModal,
+  })),
+);
+const PluginsModal = React.lazy(() =>
+  import("#/components/features/conversation-panel/plugins-modal").then(
+    (m) => ({
+      default: m.PluginsModal,
+    }),
+  ),
+);
+const HooksModal = React.lazy(() =>
+  import("#/components/features/conversation-panel/hooks-modal").then((m) => ({
+    default: m.HooksModal,
+  })),
+);
 
 export function Tools() {
   const { t } = useTranslation("openhands");
@@ -82,27 +103,31 @@ export function Tools() {
         />
       )}
 
-      {/* System Message Modal */}
-      <SystemMessageModal
-        isOpen={systemModalVisible}
-        onClose={() => setSystemModalVisible(false)}
-        systemMessage={systemMessage || null}
-      />
+      <React.Suspense fallback={null}>
+        {/* System Message Modal */}
+        {systemModalVisible && (
+          <SystemMessageModal
+            isOpen={systemModalVisible}
+            onClose={() => setSystemModalVisible(false)}
+            systemMessage={systemMessage || null}
+          />
+        )}
 
-      {/* Skills Modal */}
-      {skillsModalVisible && (
-        <SkillsModal onClose={() => setSkillsModalVisible(false)} />
-      )}
+        {/* Skills Modal */}
+        {skillsModalVisible && (
+          <SkillsModal onClose={() => setSkillsModalVisible(false)} />
+        )}
 
-      {/* Plugins Modal */}
-      {pluginsModalVisible && (
-        <PluginsModal onClose={() => setPluginsModalVisible(false)} />
-      )}
+        {/* Plugins Modal */}
+        {pluginsModalVisible && (
+          <PluginsModal onClose={() => setPluginsModalVisible(false)} />
+        )}
 
-      {/* Hooks Modal */}
-      {hooksModalVisible && (
-        <HooksModal onClose={() => setHooksModalVisible(false)} />
-      )}
+        {/* Hooks Modal */}
+        {hooksModalVisible && (
+          <HooksModal onClose={() => setHooksModalVisible(false)} />
+        )}
+      </React.Suspense>
     </div>
   );
 }
