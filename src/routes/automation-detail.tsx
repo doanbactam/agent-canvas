@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { I18nKey } from "#/i18n/declaration";
@@ -28,8 +28,6 @@ import { DetailSkeleton } from "#/components/features/automations/detail/detail-
 import { NotFoundState } from "#/components/features/automations/detail/not-found-state";
 import { ErrorState } from "#/components/features/automations/error-state";
 import { BackendNotConfigured } from "#/components/features/automations/backend-not-configured";
-import { DeleteConfirmationModal } from "#/components/features/automations/delete-confirmation-modal";
-import { EditAutomationModal } from "#/components/features/automations/detail/edit-automation-modal";
 import { useTracking } from "#/hooks/use-tracking";
 import AutomationService from "#/api/automation-service/automation-service.api";
 import {
@@ -37,6 +35,17 @@ import {
   serializeAutomation,
 } from "#/utils/automation-export";
 import { downloadBlob } from "#/utils/utils";
+
+const DeleteConfirmationModal = React.lazy(() =>
+  import("#/components/features/automations/delete-confirmation-modal").then(
+    (m) => ({ default: m.DeleteConfirmationModal }),
+  ),
+);
+const EditAutomationModal = React.lazy(() =>
+  import("#/components/features/automations/detail/edit-automation-modal").then(
+    (m) => ({ default: m.EditAutomationModal }),
+  ),
+);
 
 export default function AutomationDetail() {
   const { t } = useTranslation("openhands");
@@ -206,19 +215,23 @@ export default function AutomationDetail() {
             lastRunAt={automation.last_triggered_at}
           />
           <ActivityLogSection automation={automation} />
-          <DeleteConfirmationModal
-            automationName={automation.name}
-            isOpen={showDeleteModal}
-            onConfirm={handleDelete}
-            onCancel={() => setShowDeleteModal(false)}
-          />
-          {canEdit && (
-            <EditAutomationModal
-              automation={automation}
-              isOpen={showEditModal}
-              onClose={() => setShowEditModal(false)}
-            />
-          )}
+          <React.Suspense fallback={null}>
+            {showDeleteModal && (
+              <DeleteConfirmationModal
+                automationName={automation.name}
+                isOpen={showDeleteModal}
+                onConfirm={handleDelete}
+                onCancel={() => setShowDeleteModal(false)}
+              />
+            )}
+            {canEdit && showEditModal && (
+              <EditAutomationModal
+                automation={automation}
+                isOpen={showEditModal}
+                onClose={() => setShowEditModal(false)}
+              />
+            )}
+          </React.Suspense>
         </div>
       </div>
     </div>

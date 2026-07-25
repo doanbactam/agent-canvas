@@ -3,8 +3,6 @@ import { useTranslation } from "react-i18next";
 import { ExtensionsNavigation } from "#/components/features/skills/extensions-navigation";
 import { PluginCard } from "#/components/features/plugins/plugin-card";
 import { PluginsToolbar } from "#/components/features/plugins/plugins-toolbar";
-import { PluginDetailModal } from "#/components/features/plugins/plugin-detail-modal";
-import { AddPluginModal } from "#/components/features/plugins/add-plugin-modal";
 import { BrandButton } from "#/components/features/settings/brand-button";
 import {
   buildPluginsViewModel,
@@ -31,6 +29,17 @@ import {
   extensionModuleCardGridContainerClassName,
   extensionModuleEmptyStateClassName,
 } from "#/utils/extension-module-card-classes";
+
+const PluginDetailModal = React.lazy(() =>
+  import("#/components/features/plugins/plugin-detail-modal").then((m) => ({
+    default: m.PluginDetailModal,
+  })),
+);
+const AddPluginModal = React.lazy(() =>
+  import("#/components/features/plugins/add-plugin-modal").then((m) => ({
+    default: m.AddPluginModal,
+  })),
+);
 
 export default function SkillsPluginsScreen() {
   const { t } = useTranslation("openhands");
@@ -216,25 +225,27 @@ export default function SkillsPluginsScreen() {
             </>
           )}
 
-          {selectedPlugin && (
-            <PluginDetailModal
-              plugin={selectedPlugin}
-              isBusy={isPluginBusy(selectedPlugin)}
-              isDisabled={!isLocal}
-              onToggle={(enabled) => handleToggle(selectedPlugin, enabled)}
-              onInstall={() => handleInstall(selectedPlugin)}
-              onUninstall={() => handleUninstall(selectedPlugin)}
-              onRefresh={() => handleRefresh(selectedPlugin)}
-              onStartConversation={() =>
-                handleStartConversation(selectedPlugin)
-              }
-              onClose={() => setSelectedName(null)}
-            />
-          )}
+          <React.Suspense fallback={null}>
+            {selectedPlugin && (
+              <PluginDetailModal
+                plugin={selectedPlugin}
+                isBusy={isPluginBusy(selectedPlugin)}
+                isDisabled={!isLocal}
+                onToggle={(enabled) => handleToggle(selectedPlugin, enabled)}
+                onInstall={() => handleInstall(selectedPlugin)}
+                onUninstall={() => handleUninstall(selectedPlugin)}
+                onRefresh={() => handleRefresh(selectedPlugin)}
+                onStartConversation={() =>
+                  handleStartConversation(selectedPlugin)
+                }
+                onClose={() => setSelectedName(null)}
+              />
+            )}
 
-          {showAddModal && (
-            <AddPluginModal onClose={() => setShowAddModal(false)} />
-          )}
+            {showAddModal && (
+              <AddPluginModal onClose={() => setShowAddModal(false)} />
+            )}
+          </React.Suspense>
         </div>
       </main>
     </div>

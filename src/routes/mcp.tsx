@@ -4,7 +4,7 @@ import { ExtensionsNavigation } from "#/components/features/skills/extensions-na
 import { useTranslation } from "react-i18next";
 import { I18nKey } from "#/i18n/declaration";
 import { BrandButton } from "#/components/features/settings/brand-button";
-import { ConfirmationModal } from "#/components/shared/modals/confirmation-modal";
+
 import { useSettings } from "#/hooks/query/use-settings";
 import { useDeleteMcpServer } from "#/hooks/mutation/use-delete-mcp-server";
 import { parseMcpConfig } from "#/utils/mcp-config";
@@ -29,10 +29,24 @@ import {
   InstalledServersSection,
   McpToolbar,
   MarketplaceSection,
-  InstallServerModal,
-  CustomServerEditor,
   type McpSectionFilter,
 } from "#/components/features/mcp-page";
+
+const InstallServerModal = React.lazy(() =>
+  import("#/components/features/mcp-page/install-server-modal").then((m) => ({
+    default: m.InstallServerModal,
+  })),
+);
+const CustomServerEditor = React.lazy(() =>
+  import("#/components/features/mcp-page/custom-server-editor").then((m) => ({
+    default: m.CustomServerEditor,
+  })),
+);
+const ConfirmationModal = React.lazy(() =>
+  import("#/components/shared/modals/confirmation-modal").then((m) => ({
+    default: m.ConfirmationModal,
+  })),
+);
 
 // No ACP guard here (unlike `/settings` and `/settings/condenser`): MCP
 // servers configured via `agent_settings.mcp_config` are now forwarded to
@@ -179,32 +193,34 @@ export default function MCPPage() {
           ) : null}
         </div>
 
-        {installEntry && (
-          <InstallServerModal
-            entry={installEntry}
-            existingServers={allServers}
-            onClose={() => setInstallEntry(null)}
-          />
-        )}
+        <React.Suspense fallback={null}>
+          {installEntry && (
+            <InstallServerModal
+              entry={installEntry}
+              existingServers={allServers}
+              onClose={() => setInstallEntry(null)}
+            />
+          )}
 
-        {/* Custom (or non-marketplace) server editor. The empty-id
-            sentinel (`{ id: "", type: "sse" }`) means "add new". */}
-        {editingServer && (
-          <CustomServerEditor
-            server={editingServer}
-            existingServers={allServers}
-            onClose={() => setEditingServer(null)}
-          />
-        )}
+          {/* Custom (or non-marketplace) server editor. The empty-id
+              sentinel (`{ id: "", type: "sse" }`) means "add new". */}
+          {editingServer && (
+            <CustomServerEditor
+              server={editingServer}
+              existingServers={allServers}
+              onClose={() => setEditingServer(null)}
+            />
+          )}
 
-        {serverToDelete && (
-          <ConfirmationModal
-            text={t(I18nKey.SETTINGS$MCP_CONFIRM_DELETE)}
-            onCancel={() => setServerToDelete(null)}
-            onConfirm={handleConfirmDelete}
-            isConfirming={isDeleting}
-          />
-        )}
+          {serverToDelete && (
+            <ConfirmationModal
+              text={t(I18nKey.SETTINGS$MCP_CONFIRM_DELETE)}
+              onCancel={() => setServerToDelete(null)}
+              onConfirm={handleConfirmDelete}
+              isConfirming={isDeleting}
+            />
+          )}
+        </React.Suspense>
       </main>
     </div>
   );

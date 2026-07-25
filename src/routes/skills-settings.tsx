@@ -5,8 +5,6 @@ import { useSettings } from "#/hooks/query/use-settings";
 import { useSkills } from "#/hooks/query/use-skills";
 import { ExtensionsNavigation } from "#/components/features/skills/extensions-navigation";
 import { SkillCard } from "#/components/features/skills/skill-card";
-import { SkillDetailModal } from "#/components/features/skills/skill-detail-modal";
-import { AddSkillModal } from "#/components/features/skills/add-skill-modal";
 import { SkillsToolbar } from "#/components/features/skills/skills-toolbar";
 import { BrandButton } from "#/components/features/settings/brand-button";
 import type { SkillTypeFilter } from "#/components/features/skills/skill-type-filter";
@@ -22,6 +20,17 @@ import {
 } from "#/utils/extension-module-card-classes";
 import type { SkillInfo } from "#/types/settings";
 import { getSkillCardDescription } from "#/components/features/skills/get-skill-card-description";
+
+const SkillDetailModal = React.lazy(() =>
+  import("#/components/features/skills/skill-detail-modal").then((m) => ({
+    default: m.SkillDetailModal,
+  })),
+);
+const AddSkillModal = React.lazy(() =>
+  import("#/components/features/skills/add-skill-modal").then((m) => ({
+    default: m.AddSkillModal,
+  })),
+);
 
 function matchesSearch(skill: SkillInfo, query: string): boolean {
   if (!query) return true;
@@ -195,18 +204,22 @@ function SkillsSettingsScreen() {
             </>
           )}
 
-          {selectedSkill && (
-            <SkillDetailModal
-              skill={selectedSkill}
-              enabled={!disabledSet.has(selectedSkill.name)}
-              onToggle={(enabled) => handleToggle(selectedSkill.name, enabled)}
-              onClose={() => setSelectedSkill(null)}
-            />
-          )}
+          <React.Suspense fallback={null}>
+            {selectedSkill && (
+              <SkillDetailModal
+                skill={selectedSkill}
+                enabled={!disabledSet.has(selectedSkill.name)}
+                onToggle={(enabled) =>
+                  handleToggle(selectedSkill.name, enabled)
+                }
+                onClose={() => setSelectedSkill(null)}
+              />
+            )}
 
-          {showAddSkillModal && (
-            <AddSkillModal onClose={() => setShowAddSkillModal(false)} />
-          )}
+            {showAddSkillModal && (
+              <AddSkillModal onClose={() => setShowAddSkillModal(false)} />
+            )}
+          </React.Suspense>
         </div>
       </main>
     </div>
