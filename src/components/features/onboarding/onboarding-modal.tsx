@@ -269,15 +269,15 @@ export function OnboardingModal({
   // Onboarding Completed — `onLaunched` runs only after a conversation is
   // successfully created (the hello message or a recommended automation), so
   // wrapping it captures completion exactly once before the modal closes.
-  const handleCompleted = () => {
+  const handleCompleted = React.useCallback(() => {
     trackOnboardingCompleted({ agent: selectedAgentId });
     onClose();
-  };
+  }, [trackOnboardingCompleted, selectedAgentId, onClose]);
 
   // Onboarding Skipped/Dismissed — the user exited before completing, via the
   // skip button (non-final steps) or the final-step Close button. `currentPhase`
   // records where they left, which also distinguishes the two affordances.
-  const handleSkipOrDismiss = () => {
+  const handleSkipOrDismiss = React.useCallback(() => {
     trackOnboardingSkipped({
       step: currentPhase,
       stepIndex: currentStep,
@@ -285,7 +285,14 @@ export function OnboardingModal({
       agent: selectedAgentId,
     });
     onClose();
-  };
+  }, [
+    trackOnboardingSkipped,
+    currentPhase,
+    currentStep,
+    totalSteps,
+    selectedAgentId,
+    onClose,
+  ]);
 
   return (
     // No `onClose`: the flow must only be dismissed via explicit actions
