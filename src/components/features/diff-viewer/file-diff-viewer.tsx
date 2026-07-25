@@ -136,10 +136,10 @@ function FileDiffViewerImpl({ path, type, commit }: FileDiffViewerProps) {
         { name: oldName, contents: original, lang: language },
         { name: newName, contents: modified, lang: language },
       );
-    } catch (error) {
+    } catch {
       // Defensive fallback: parseDiffFromFile can fail on malformed/empty
-      // inputs. Log the real failure and show a non-loading fallback message.
-      console.error("Failed to parse diff for", filePath, error);
+      // inputs. Show a non-loading fallback message and let the caller handle
+      // any telemetry if this becomes frequent.
       return null;
     }
   }, [isSuccess, diff, oldName, newName, language, isAdded, isDeleted]);
@@ -261,8 +261,8 @@ function FileDiffViewerImpl({ path, type, commit }: FileDiffViewerProps) {
                   className={cn(
                     "p-1 rounded transition-colors cursor-pointer",
                     viewMode === mode
-                      ? "bg-[var(--oh-interactive-hover)] text-white"
-                      : "text-[var(--oh-muted)] hover:bg-[var(--oh-interactive-hover)] hover:text-white",
+                      ? "bg-[var(--oh-interactive-hover)] text-foreground"
+                      : "text-muted hover:bg-[var(--oh-interactive-hover)] hover:text-foreground",
                   )}
                 >
                   <Icon className="w-4 h-4" />
